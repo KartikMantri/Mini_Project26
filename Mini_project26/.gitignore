@@ -1,0 +1,16 @@
+# Data outputs (regenerate locally with `python collect_data.py`)
+data/*.csv
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
