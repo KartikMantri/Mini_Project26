@@ -12,7 +12,7 @@ that signal — or misses it (a tradeable inefficiency).
 
 | Role | Name |
 |---|---|
-| Instructor | Prof. Girish Sharma |
+| Instructor | Assistant Prof. Girish Sharma |
 | Student | Kartik Mantri (24UCS246) |
 | Student | Velu Kala (24DCS012) |
 | Institute | The LNM Institute of Information Technology (LNMIIT) |
