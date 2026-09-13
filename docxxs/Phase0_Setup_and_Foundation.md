@@ -28,11 +28,11 @@ A clean environment and a decided scope, so no time is lost later.
 
 4. **Repo folder structure** (this repository):
    ```
-   Mini_Project26/
+   .
    ├── tickers.csv          # ticker + sector, read at runtime
    ├── collect_data.py       # Phase 1 pipeline script
    ├── requirements.txt
-   ├── data/                 # pipeline outputs land here (gitignored — regenerate locally)
+   ├── data/                 # pipeline outputs land here (committed — real dataset)
    └── docxxs/               # phase-wise documentation (this folder)
    ```
 

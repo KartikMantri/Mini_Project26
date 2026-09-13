@@ -34,12 +34,12 @@ Full documentation for each phase lives in [`docxxs/`](docxxs/).
 ## Repository structure
 
 ```
-Mini_Project26/
+.
 ├── README.md
 ├── requirements.txt
 ├── tickers.csv              # 45-ticker universe (ticker, sector)
 ├── collect_data.py           # Phase 1 pipeline script
-├── data/                     # pipeline outputs (gitignored — regenerate locally)
+├── data/                     # pipeline outputs (committed — real dataset, see Phase 1 docs)
 └── docxxs/                   # phase-wise documentation
     ├── Phase0_Setup_and_Foundation.md
     ├── Phase1_Data_Collection.md
