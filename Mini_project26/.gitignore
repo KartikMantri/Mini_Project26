@@ -1,6 +1,3 @@
-# Data outputs (regenerate locally with `python collect_data.py`)
-data/*.csv
-
 # Python
 __pycache__/
 *.pyc
