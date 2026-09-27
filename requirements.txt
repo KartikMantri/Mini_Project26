@@ -2,3 +2,8 @@ pandas
 numpy
 yfinance
 datasets
+transformers
+torch
+pysentiment2
+textstat
+nltk
