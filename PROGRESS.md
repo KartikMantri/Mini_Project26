@@ -22,9 +22,16 @@ connective narrative across phases, including decisions still being debated.
 | 5 — Trading Backtest | ⬜ Not started |
 | 6 — Dashboard & Report | ⬜ Not started |
 
-**Immediate next step:** decide how to handle the 4 remaining `NaN` rows (drop/impute/leave for
-XGBoost), then start Phase 3 (date-based train/test split, Logistic Regression baseline →
-XGBoost) — Phase 3 itself is now the real test of limitation #1 below (weak univariate signal).
+**Phase 2 is now closed.** Immediate next step: start Phase 3 (date-based train/test split,
+Logistic Regression baseline → XGBoost) — Phase 3 itself is now the real test of limitation #1
+below (weak univariate signal).
+
+**2026-09-28 — NaN-handling decision locked:** Kartik chose to **leave the 4 NaN rows in
+`features.csv` as-is** rather than drop them now — deferred to Phase 3, where XGBoost can
+handle missing values natively. Note for whoever builds the Logistic Regression baseline first:
+scikit-learn's `LogisticRegression` cannot take `NaN` input, so those 4 rows (or at least their
+`finbert_qa_*`/`qa_directness` columns) will need dropping or imputing *at that step specifically*
+— this was deliberately not pre-solved in `features.csv` itself.
 
 **2026-09-28 — Sanity-check pass on `features.csv`, limitations found:**
 - Directional check: AAPL's known-outcome calls (2021-01-27, 2022-10-27, 2024-02-01 — all
@@ -181,14 +188,18 @@ XGBoost) — Phase 3 itself is now the real test of limitation #1 below (weak un
 
 ## Remaining work, by phase
 
-- **Phase 2:** lock the FinBERT chunking/weighting design (see open question above), install
-  `pysentiment2`, `transformers`, `torch`, `textstat`, `nltk`; write and run
-  `extract_features.py`; produce and review `features.csv`; write
-  `docxxs/Phase2_Signal_Extraction.md` with real results; commit.
+- **Phase 2:** ✅ Done — `extract_features.py` written and run for real, `features.csv`
+  produced (509 rows × 17 features), sanity-checked, limitations documented with mitigations
+  in `docxxs/Phase2_Signal_Extraction.md`, flowchart added, all committed (`6b94ea8`, `3a7195f`).
+  The 4 NaN Q&A rows are deliberately left unresolved in the data itself — see the NaN-handling
+  decision above; Phase 3 handles them at training time.
 - **Phase 3:** train Logistic Regression baseline then XGBoost on `features.csv` + `label`,
-  using a date-based (not random) train/test split; evaluate accuracy/AUC/confusion matrix;
-  inspect feature importances (this is also where the Phase 2 weighting assumption gets
-  empirically checked); output `predictions.csv`.
+  using a date-based (not random) train/test split; handle the 4 NaN rows for the Logistic
+  Regression step specifically (drop or impute — sklearn can't take NaN, XGBoost can);
+  evaluate accuracy/AUC/confusion matrix; inspect feature importances (this is also where
+  Phase 2's "no hand-picked section weights" decision and the weak-univariate-signal finding
+  both get empirically tested — a modest result here is a valid finding, not a failure);
+  output `predictions.csv`.
 - **Phase 4:** compare immediate (day 0→+1) vs. drift (day +2→+20) market reaction windows
   against Phase 3's predicted confidence, via t-test.
 - **Phase 5:** long-GOOD/short-BAD backtest with a confidence filter, transaction costs,

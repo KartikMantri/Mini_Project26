@@ -73,6 +73,12 @@ already in `features.csv` on rerun), checkpoints every 20 rows.
 | 7 | **Specificity heuristics are naive regex, not context-aware.** `numeric_density` counts *any* digit-containing word (including dates like "2021" or ordinal quarter labels like "Q1"), `forward_looking_count` is a raw substring match with no grammar check, and `qa_directness` only checks "does the answer contain any number" — an analyst could get a throwaway number unrelated to their actual question and still count as "direct." | Design-time review of the regex logic in `extract_features.py`. | Accept as a cheap first-pass heuristic (consistent with the project's stated preference for simple, transparent signals per [[project-decoding-the-game]]) and revisit only if Phase 3's feature importances show these columns matter — no point refining a feature the classifier ends up ignoring. |
 | 8 | **FinBERT's neutral-class probability is discarded.** Reducing each chunk to `P(positive) - P(negative)` means a chunk that's 90% neutral/5%/5% looks identical to one that's 50%/45%/5% in the net-sentiment number, even though the second is a much more decisive, information-dense chunk. | Design choice made when locking Option D (see Design decisions above). | If Phase 3's accuracy is disappointingly low, consider adding `finbert_{prepared,qa}_neutral_mean` back as an extra pair of columns — "how much of the call was low-conviction filler" is a distinct signal from directional tone. |
 
+## NaN-handling decision (locked 2026-09-28)
+The 4 rows from limitation #3 are left as `NaN` in `features.csv` — not dropped or imputed here.
+Deferred to Phase 3: XGBoost handles missing values natively, but the Logistic Regression
+baseline (scikit-learn) cannot take `NaN` input, so those rows (or their `finbert_qa_*` /
+`qa_directness` columns) need dropping/imputing specifically at that step.
+
 ## Next
-→ Decide how to handle limitation #3's 4 NaN rows, run Phase 3 — Type Classifier, and treat limitation #1
-as an open empirical question the classifier itself needs to answer.
+→ Phase 3 — Type Classifier. Treat limitation #1 (weak univariate signal) as an open empirical
+question the classifier itself needs to answer, not a foregone conclusion either way.
