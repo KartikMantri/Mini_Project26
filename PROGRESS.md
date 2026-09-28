@@ -16,17 +16,43 @@ connective narrative across phases, including decisions still being debated.
 |---|---|
 | 0 — Setup & Foundation | ✅ Done |
 | 1 — Data Collection | ✅ Done, real data committed and pushed |
-| 2 — Signal Extraction | ✅ `features.csv` generated (509 rows, 17 features), pending sanity-check + NaN-handling decision before commit |
+| 2 — Signal Extraction | ✅ `features.csv` generated and sanity-checked, committed (`6b94ea8`). See limitations below. |
 | 3 — Type Classifier | ⬜ Not started (planned, see docxxs/Phase3_Type_Classifier.md) |
 | 4 — Market-Reaction Test | ⬜ Not started |
 | 5 — Trading Backtest | ⬜ Not started |
 | 6 — Dashboard & Report | ⬜ Not started |
 
-**Immediate next step:** sanity-check `features.csv` values against known real-world quarters
-(same spot-check approach used for Phase 1), decide how to handle the 4 remaining `NaN` rows,
-then start Phase 3 (date-based train/test split, Logistic Regression baseline → XGBoost).
+**Immediate next step:** decide how to handle the 4 remaining `NaN` rows (drop/impute/leave for
+XGBoost), then start Phase 3 (date-based train/test split, Logistic Regression baseline →
+XGBoost) — Phase 3 itself is now the real test of limitation #1 below (weak univariate signal).
 
-**2026-09-27/28 — Phase 2 built, run, and a real bug found and fixed:**
+**2026-09-28 — Sanity-check pass on `features.csv`, limitations found:**
+- Directional check: AAPL's known-outcome calls (2021-01-27, 2022-10-27, 2024-02-01 — all
+  previously validated as BAD events in Phase 1) show correctly as BAD in `features.csv`.
+- Distribution check: all 17 features fall in sane ranges, no broken/impossible values.
+- **Correlation-with-label check (the important one): a Welch's t-test on all 17 features
+  between GOOD and BAD groups found no statistically significant separation on any single
+  feature** — best p-value is 0.10 (`finbert_qa_mean`), everything else p > 0.28,
+  `numeric_density` is essentially identical between groups. `finbert_qa_mean` even runs
+  slightly counter-intuitive (higher for BAD than GOOD).
+- **This does not mean the pipeline is broken** — t-tests only catch linear/univariate
+  separation, and Phase 3's classifier (especially XGBoost) can pick up interactions a t-test
+  can't. But it's a legitimate, known-hard-problem signal (executives tend to sound calm
+  regardless of actual results) rather than a given the classifier will work well. Treated as
+  an open empirical question for Phase 3, not assumed either way.
+- Full limitations list (8 items, each with a possible mitigation) written into
+  `docxxs/Phase2_Signal_Extraction.md`, covering: weak group separation, counter-intuitive
+  direction, the 4 unsplit-Q&A rows, LM's blindness to negation, incomplete dilution fix from
+  chunking, FinBERT only spot-checked on AAPL so far, naive specificity regex, and discarding
+  FinBERT's neutral-class probability.
+- Added `docxxs/phase2_flowchart.svg` (mirrors Phase 1's flowchart) showing the full pipeline:
+  `master.csv` → section split → chunking → FinBERT/LM/fog/specificity → `features.csv` →
+  Phase 3.
+- **Downstream effect:** Phase 3 should not assume strong accuracy is guaranteed going in —
+  a modest or even weak result is itself a valid, reportable finding for this project, not a
+  failure, given the honest empirical picture from this sanity check.
+
+**2026-09-27 — Phase 2 built, run, and a real bug found and fixed:**
 - Wrote `extract_features.py` per the locked Option D design (8 FinBERT + 5 LM + 1 readability
   + 3 specificity = 17 features/call).
 - First run hit two real bugs, both fixed and verified against live output before accepting
