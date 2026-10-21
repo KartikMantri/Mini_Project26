@@ -10,21 +10,26 @@ connective narrative across phases, including decisions still being debated.
 
 ---
 
-## Current snapshot (as of 2026-09-28)
+## Current snapshot (as of 2026-10-19)
 
 | Phase | Status |
 |---|---|
 | 0 — Setup & Foundation | ✅ Done |
-| 1 — Data Collection | ✅ Done, real data committed and pushed |
-| 2 — Signal Extraction | ✅ `features.csv` generated and sanity-checked, committed (`6b94ea8`). See limitations below. |
-| 3 — Type Classifier | ⬜ Not started (planned, see docxxs/Phase3_Type_Classifier.md) |
-| 4 — Market-Reaction Test | ⬜ Not started |
-| 5 — Trading Backtest | ⬜ Not started |
-| 6 — Dashboard & Report | ⬜ Not started |
+| 1 — Data Collection | ✅ Scaled: 10,493 calls across 200 tickers (2005–2025) |
+| 2 — Signal Extraction | ✅ Complete: 35 features extracted across 10,493 calls in `data/features_expanded.csv` |
+| 3 — Type Classifier | 🔄 Ready to train (`train_classifier.py`) |
+| 4 — Market-Reaction Test | 🔄 Script ready (`market_reaction.py`) |
+| 5 — Trading Backtest | 🔄 Script ready (`backtest.py`) |
+| 6 — Dashboard & Report | 🔄 Script ready (`dashboard.py`) |
 
-**Phase 2 is now closed.** Immediate next step: start Phase 3 (date-based train/test split,
-Logistic Regression baseline → XGBoost) — Phase 3 itself is now the real test of limitation #1
-below (weak univariate signal).
+**Immediate next step:** Train Phase 3 classifiers (Logistic Regression baseline + XGBoost) on `data/features_expanded.csv`.
+
+**2026-10-19 — Data Scaling & Fast Multi-Worker Feature Extraction Complete:**
+- **Data Scaling (Priority 1 from Velu's Proposal):** Expanded universe from 45 to 200 tickers and window to 2005–2025. Collected 10,493 transcripts, labeled via market abnormal return: 5,638 GOOD / 4,855 BAD in `data/master.csv`.
+- **Parallel Feature Pipeline:** Built `extract_features_fast.py` and `_feat_worker.py` utilizing 7 concurrent background worker processes, processing all 10,493 transcripts in ~3.5 hours.
+- **Expanded Feature Set (35 columns):** Replaced slow FinBERT with high-throughput VADER (prepared remarks, Q&A, and paragraph distributions), Loughran-McDonald dictionary percentages (uncertainty, weak/strong modals, litigious), Fog/Flesch readability indices, numeric density, forward-looking statements, and Q&A interaction metrics.
+- **Complete Mapping in `docxxs/features.md`:** Documented all 35 columns with actual min/mean/max/null metrics calculated across the entire 10,493-row dataset.
+- **Repository & Teammate Access Architecture:** Excluded >100MB raw files (`raw_transcripts.csv`, `master.csv`, `labeled_all.csv`) from Git tracking to comply with GitHub limits. Committed `data/features_expanded.csv` (3.98 MB) and `data/prices.csv` (18.02 MB) so teammates can immediately train models in Phase 3 without requiring raw data downloads or hours of feature extraction.
 
 **2026-09-28 — NaN-handling decision locked:** Kartik chose to **leave the 4 NaN rows in
 `features.csv` as-is** rather than drop them now — deferred to Phase 3, where XGBoost can
