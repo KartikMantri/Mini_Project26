@@ -1,6 +1,6 @@
 # Phase 3 — Type Classifier (Good / Bad)
 
-**Status:** ⬜ Not started
+**Status:** 🔄 Ready to train (`train_classifier.py`)
 
 ## Goal
 A trained model that predicts Good/Bad from language alone — no future price data — and a
@@ -14,8 +14,8 @@ measured accuracy that proves the signal is real.
 5. Output per call: predicted label + confidence `P(Good)`.
 
 ## Input / Output
-- **Input:** `features.csv` (Phase 2) joined to `label` from `master.csv` (Phase 1).
-- **Output:** trained model + `predictions.csv` — `[ticker, call_date, predicted, confidence]`.
+- **Input:** `data/features_expanded.csv` (Phase 2), which already includes `label`.
+- **Output:** trained models in `models/` + `data/predictions.csv` — `[ticker, call_date, label, predicted, confidence_good]`.
 
 ## Next
 → Phase 4 — Market-Reaction Test

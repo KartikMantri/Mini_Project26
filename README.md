@@ -46,20 +46,27 @@ pip install -r requirements.txt
 python train_classifier.py
 ```
 
+Phase 4 (`market_reaction.py`) and the dashboard (`dashboard.py`) also read `data/master.csv`, which is not in Git — generate it locally using the steps below before running them.
+
 ### Why Raw Transcript Files Are Excluded From Git
 Raw transcripts and intermediate files exceed GitHub's strict 100 MB per-file limit:
-- `data/raw_transcripts.csv` (~741 MB)
-- `data/labeled_all.csv` (~709 MB)
-- `data/master.csv` (~582 MB)
+- `data/master.csv` (~582 MB) — needed locally for Phase 4 and the dashboard
+- `data/raw_transcripts.csv` (~741 MB) — intermediate; no later phase reads it, safe to delete
+- `data/labeled_all.csv` (~709 MB) — intermediate; no later phase reads it, safe to delete
 
-These are excluded via `.gitignore`. If you ever need to re-generate the raw dataset from scratch:
+These are excluded via `.gitignore`. To re-generate them locally:
 ```bash
-# 1. Download transcripts from Hugging Face & label returns via yfinance
+# 1. Download transcripts from Hugging Face & label returns using the committed data/prices.csv
 python collect_data.py --start 2005-01-01 --end 2025-12-31
 
-# 2. Extract 35 features using 7 parallel worker processes
+# 2. Optional: only if the features need to change, re-extract using 7 parallel worker processes
 python extract_features_fast.py --workers 7
 ```
+
+Notes for step 1:
+- **Always pass the dates.** The script defaults to 2021-01-01 → 2024-06-30, which gives only 2,317 rows in `master.csv` instead of 10,493.
+- **Don't use `--force`** if you want to reproduce the committed dataset. It re-downloads `prices.csv`, which can change the labels.
+- **Delete any partial `data/raw_transcripts.csv` first.** The script reuses an existing file, even one covering a narrower date range.
 
 ---
 
@@ -83,7 +90,7 @@ python extract_features_fast.py --workers 7
 ├── data/
 │   ├── features_expanded.csv           # 10,493 rows x 35 columns (Phase 2 output, committed)
 │   ├── prices.csv                      # Historical daily price data (committed)
-│   └── (raw_transcripts, master, labeled_all are gitignored due to >100MB size)
+│   └── (master, raw_transcripts, labeled_all are gitignored due to >100MB size; generated locally)
 │
 └── docxxs/                             # Phase-wise documentation & decisions
     ├── features.md                     # Comprehensive dictionary for all 35 features

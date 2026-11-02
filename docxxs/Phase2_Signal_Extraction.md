@@ -6,7 +6,7 @@
 Transform raw earnings call transcripts into structured numerical feature vectors describing linguistic style, management sentiment, uncertainty, complexity, and Q&A dynamics.
 
 ## Dataset Scaling & Architecture Evolution
-The initial prototype extracted 17 FinBERT-based features across 509 calls in `features.csv`. When the dataset was expanded to **10,493 calls** (200 tickers, 2005–2025) per the data scaling plan ([`Decision_Velu_Data_Scaling.md`](Decision_Velu_Data_Scaling.md)), single-process FinBERT inference proved too computationally slow (~50+ hours on CPU). 
+The initial prototype extracted 17 FinBERT-based features across 509 calls in `features.csv` (since removed from the repo; last changed in commit `6b94ea8`). When the dataset was expanded to **10,493 calls** (200 tickers, 2005–2025) per the data scaling plan ([`Decision_Velu_Data_Scaling.md`](Decision_Velu_Data_Scaling.md)), single-process FinBERT inference proved too computationally slow (~50+ hours on CPU). 
 
 To scale efficiently while improving signal diversity, the pipeline transitioned to:
 - **Fast multi-process orchestrator:** [`extract_features_fast.py`](../extract_features_fast.py) leveraging 7 parallel background workers running [`_feat_worker.py`](../_feat_worker.py).

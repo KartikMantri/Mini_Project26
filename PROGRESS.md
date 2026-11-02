@@ -10,7 +10,7 @@ connective narrative across phases, including decisions still being debated.
 
 ---
 
-## Current snapshot (as of 2026-10-19)
+## Current snapshot (as of 2026-11-03)
 
 | Phase | Status |
 |---|---|
@@ -23,6 +23,13 @@ connective narrative across phases, including decisions still being debated.
 | 6 — Dashboard & Report | 🔄 Script ready (`dashboard.py`) |
 
 **Immediate next step:** Train Phase 3 classifiers (Logistic Regression baseline + XGBoost) on `data/features_expanded.csv`.
+
+**2026-11-03 — Local data regenerated and verified, unused data files removed:**
+- **Verified Velu's scaled dataset on Kartik's machine:** regenerated `data/master.csv` with `python collect_data.py --start 2005-01-01 --end 2025-12-31` (no `--force`, so it reused the committed `data/prices.csv`). Result: 10,493 rows, 5,638 GOOD / 4,855 BAD; every row matches `data/features_expanded.csv` on ticker + call date, and every label agrees.
+- **Regeneration gotcha:** a first run with the script's default dates (2021-01-01 → 2024-06-30) produced only 2,317 rows, and the script reuses an existing `raw_transcripts.csv`, so that file had to be deleted before re-running with the full window. Steps are now in `README.md`.
+- **Removed `features.csv` from the repo root:** the old 509-row, 17-feature prototype output, superseded by `data/features_expanded.csv` and not read by any script for Phases 3–6. Older entries below mention it as history; it can be recovered from Git (last changed in `6b94ea8`). `extract_features.py` still writes to this path if re-run.
+- **Deleted local `data/raw_transcripts.csv` and `data/labeled_all.csv`:** both gitignored, so this only affects Kartik's machine. No Phase 3–6 script reads them, and `collect_data.py` can rebuild them.
+- **Downstream effect:** Phases 3 and 5 need only committed files. Phase 4 and the dashboard also need local `data/master.csv`, which every collaborator must generate or be sent.
 
 **2026-10-19 — Data Scaling & Fast Multi-Worker Feature Extraction Complete:**
 - **Data Scaling (Priority 1 from Velu's Proposal):** Expanded universe from 45 to 200 tickers and window to 2005–2025. Collected 10,493 transcripts, labeled via market abnormal return: 5,638 GOOD / 4,855 BAD in `data/master.csv`.
@@ -197,9 +204,11 @@ scikit-learn's `LogisticRegression` cannot take `NaN` input, so those 4 rows (or
   produced (509 rows × 17 features), sanity-checked, limitations documented with mitigations
   in `docxxs/Phase2_Signal_Extraction.md`, flowchart added, all committed (`6b94ea8`, `3a7195f`).
   The 4 NaN Q&A rows are deliberately left unresolved in the data itself — see the NaN-handling
-  decision above; Phase 3 handles them at training time.
-- **Phase 3:** train Logistic Regression baseline then XGBoost on `features.csv` + `label`,
-  using a date-based (not random) train/test split; handle the 4 NaN rows for the Logistic
+  decision above; Phase 3 handles them at training time. (That prototype was later superseded
+  by `data/features_expanded.csv` — 10,493 rows × 35 features — and `features.csv` was removed
+  on 2026-11-03.)
+- **Phase 3:** train Logistic Regression baseline then XGBoost on `data/features_expanded.csv`,
+  using a date-based (not random) train/test split; handle missing values for the Logistic
   Regression step specifically (drop or impute — sklearn can't take NaN, XGBoost can);
   evaluate accuracy/AUC/confusion matrix; inspect feature importances (this is also where
   Phase 2's "no hand-picked section weights" decision and the weak-univariate-signal finding
