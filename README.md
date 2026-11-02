@@ -24,7 +24,7 @@ that signal — or misses it (a tradeable inefficiency).
 | 0 | Setup & Foundation | ✅ Complete | Repository structure, universe definition, environment |
 | 1 | Data Collection | ✅ Complete | 10,493 calls collected (200 tickers, 2005–2025), labeled via abnormal returns |
 | 2 | Signal Extraction (Features) | ✅ Complete | 35 language features extracted per call → [`data/features_expanded.csv`](data/features_expanded.csv) |
-| 3 | Type Classifier (Good/Bad) | 🔄 Ready to train | Baseline Logistic Regression & XGBoost (`train_classifier.py`) |
+| 3 | Type Classifier (Good/Bad) | 🟡 In progress | Baseline Logistic Regression & XGBoost (`train_classifier.py`); first validation run done, final test run pending |
 | 4 | Market-Reaction Test | 🔄 Script ready | Event study & Welch's t-test (`market_reaction.py`) |
 | 5 | Trading Backtest | 🔄 Script ready | Long/short portfolio simulation & Sharpe ratio (`backtest.py`) |
 | 6 | Dashboard & Report | 🔄 Script ready | Interactive Streamlit analytics UI (`dashboard.py`) |
@@ -43,8 +43,11 @@ The core modeling dataset is **already committed to this repository**:
 **You do NOT need to download gigabytes of raw transcripts or re-run the 7-worker NLP extraction.** Simply pull the repo and run Phase 3:
 ```bash
 pip install -r requirements.txt
-python train_classifier.py
+python train_classifier.py           # train and score on validation only; saves nothing
+python train_classifier.py --final   # final run: score on the test set and save predictions
 ```
+
+Use `--final` only once the model is settled, so the test score stays a fair measure.
 
 Phase 4 (`market_reaction.py`) and the dashboard (`dashboard.py`) also read `data/master.csv`, which is not in Git — generate it locally using the steps below before running them.
 
