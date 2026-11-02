@@ -107,4 +107,4 @@ Notes for step 1:
 
 ## Tech Stack
 
-`pandas` · `numpy` · `yfinance` · `datasets` (Hugging Face) · `nltk` (VADER) · `pysentiment2` (Loughran-McDonald) · `textstat` · `scikit-learn` · `xgboost` · `streamlit`
+`pandas` · `numpy` · `yfinance` · `datasets` (Hugging Face) · `vaderSentiment` · `textstat` · `scikit-learn` · `xgboost` · `scipy` · `joblib` · `plotly` · `streamlit`

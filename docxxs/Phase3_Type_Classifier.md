@@ -15,7 +15,7 @@ measured accuracy that proves the signal is real.
 
 ## Input / Output
 - **Input:** `data/features_expanded.csv` (Phase 2), which already includes `label`.
-- **Output:** trained models in `models/` + `data/predictions.csv` — `[ticker, call_date, label, predicted, confidence_good]`.
+- **Output:** trained models in `models/` + `data/predictions.csv` — `[ticker, call_date, label, lr_predicted, lr_confidence_good, xgb_predicted, xgb_confidence_good]` (the `xgb_*` columns are only written if XGBoost is installed).
 
 ## Next
 → Phase 4 — Market-Reaction Test

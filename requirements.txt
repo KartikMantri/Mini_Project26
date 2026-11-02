@@ -2,8 +2,11 @@ pandas
 numpy
 yfinance
 datasets
-transformers
-torch
-pysentiment2
 textstat
-nltk
+vaderSentiment
+scikit-learn
+xgboost
+scipy
+joblib
+plotly
+streamlit
