@@ -57,5 +57,11 @@ python feature_study.py                 # optional, slow: re-runs the input sele
 - `data/text_scores.csv` — out-of-sample text scores (committed; lets teammates run without master.csv)
 - `models/final_model.joblib` — final model refit on all data
 
+## Earlier attempt (2026-11-03, Kartik)
+A fixed split (train to 2018, validation 2019–2021, test 2022+, with 61-trading-day gaps) on the
+original 31 features gave validation AUC 0.519 (Logistic Regression) and 0.511 (XGBoost), no
+better than chance. That result led to the current design; its validation/holdout separation and
+leakage gap are kept in the walk-forward setup. Details in `PROGRESS.md`.
+
 ## Next
 → Phase 4 — Market-Reaction Test

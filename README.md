@@ -43,8 +43,11 @@ The core modeling dataset is **already committed to this repository**:
 **You do NOT need to download gigabytes of raw transcripts or re-run the 7-worker NLP extraction.** Simply pull the repo and run Phase 3:
 ```bash
 pip install -r requirements.txt
-python train_classifier.py
+python train_classifier.py   # ~30 s; uses the committed data/text_scores.csv
 ```
+
+Every prediction is out-of-sample: each year is scored by a model trained only on earlier years.
+Rebuilding the text scores (`--rebuild-text`) needs local `data/master.csv`.
 
 Phase 4 (`market_reaction.py`) and the dashboard (`dashboard.py`) also read `data/master.csv`, which is not in Git — generate it locally using the steps below before running them.
 
@@ -109,4 +112,4 @@ Notes for step 1:
 
 ## Tech Stack
 
-`pandas` · `numpy` · `yfinance` · `datasets` (Hugging Face) · `nltk` (VADER) · `pysentiment2` (Loughran-McDonald) · `textstat` · `scikit-learn` · `xgboost` · `streamlit`
+`pandas` · `numpy` · `yfinance` · `datasets` (Hugging Face) · `vaderSentiment` · `textstat` · `scikit-learn` · `xgboost` · `scipy` · `joblib` · `plotly` · `streamlit`

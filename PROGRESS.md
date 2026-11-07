@@ -52,6 +52,16 @@ connective narrative across phases, including decisions still being debated.
 - **Also:** Phase 4/5 scripts crash on Windows consoles (they print → and ≥); run with
   `PYTHONIOENCODING=utf-8` until they are rewritten.
 
+**2026-11-03 — Phase 3 split changed to train/validation/test, first validation run done:**
+- **Why a validation set:** the script originally had only train (78.1%) and test (21.9%). Any adjustment made after seeing the test score would let the test set help choose the model, and Phases 4–5 rely on these predictions. Validation is now used for comparing and tuning, and the test set runs once.
+- **Why gaps:** a label uses prices up to 61 trading days after the call (60 from the labeling window, plus 1 because the date lookup moves timed calls to the next trading day). Calls just before a boundary would leak later prices into training, so they're left out.
+- **Split (10,493 calls, 2005-10-13 → 2025-05-15):** train 6,113 (58.3%, to 2018-10-02); validation 1,783 (17.0%, 2019-01-09 → 2021-10-05); test 2,296 (21.9%, 2022-01-06 → 2025-05-15); unused gaps 301 (2.9%).
+- **`train_classifier.py` changes:** default run trains and scores on validation only and saves nothing. `--final` retrains on all 8,043 pre-test calls, scores the test set, and saves models, `data/predictions.csv` and `docxxs/Phase3_results.md`.
+- **First validation results (no tuning):** Logistic Regression 50.4% accuracy / 0.519 AUC, predicting GOOD for 93% of calls; XGBoost 51.2% / 0.511, predicting GOOD for 70%. Always guessing the larger class gets 50.1%. With a rough AUC margin of error of ±0.03, neither is clearly better than chance.
+- **Benchmark correction:** only 47.0% of test calls are GOOD, so the test accuracy to beat is 53.0% (always guessing BAD), not the 53.7% GOOD share across the whole dataset.
+- **Downstream effect:** Phases 4–5 need `data/predictions.csv`, which now exists only after `--final`. If the signal stays this weak, Phase 4 may show no meaningful difference, which is still a valid finding.
+- **Superseded 2026-11-07:** the walk-forward design above (2026-11-07 entry) replaced this fixed split and the `--final` flag. Its ideas carry over: inputs are chosen on validation years (2012–2017) only, a held-out period (2018–2025) is never used for choosing, and an embargo gap keeps later prices out of training. These AUC 0.51–0.52 results matched the walk-forward rerun of the original 31 features (≈0.51).
+
 **2026-11-03 — Local data regenerated and verified, unused data files removed:**
 - **Verified Velu's scaled dataset on Kartik's machine:** regenerated `data/master.csv` with `python collect_data.py --start 2005-01-01 --end 2025-12-31` (no `--force`, so it reused the committed `data/prices.csv`). Result: 10,493 rows, 5,638 GOOD / 4,855 BAD; every row matches `data/features_expanded.csv` on ticker + call date, and every label agrees.
 - **Regeneration gotcha:** a first run with the script's default dates (2021-01-01 → 2024-06-30) produced only 2,317 rows, and the script reuses an existing `raw_transcripts.csv`, so that file had to be deleted before re-running with the full window. Steps are now in `README.md`.
