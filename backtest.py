@@ -34,7 +34,7 @@ HOLD_DAYS    = 20    # hold position for +2 to +21 trading days after call
 
 
 def price_at_offset(series, call_date, offset):
-    idx = series.index.searchsorted(call_date)
+    idx = series.index.searchsorted(pd.Timestamp(call_date).normalize())  # day 0 = call date
     target = idx + offset
     if target >= len(series):
         return None

@@ -10,19 +10,47 @@ connective narrative across phases, including decisions still being debated.
 
 ---
 
-## Current snapshot (as of 2026-11-03)
+## Current snapshot (as of 2026-11-07)
 
 | Phase | Status |
 |---|---|
 | 0 — Setup & Foundation | ✅ Done |
 | 1 — Data Collection | ✅ Scaled: 10,493 calls across 200 tickers (2005–2025) |
 | 2 — Signal Extraction | ✅ Complete: 35 features extracted across 10,493 calls in `data/features_expanded.csv` |
-| 3 — Type Classifier | 🔄 Ready to train (`train_classifier.py`) |
-| 4 — Market-Reaction Test | 🔄 Script ready (`market_reaction.py`) |
-| 5 — Trading Backtest | 🔄 Script ready (`backtest.py`) |
+| 3 — Type Classifier | ✅ Complete: walk-forward model, reaction AUC 0.588 on 2018–2025 holdout |
+| 4 — Market-Reaction Test | 🔄 Script runs; needs upgrade (regression with controls, clustered errors) |
+| 5 — Trading Backtest | 🔄 Script runs but its maths is wrong (see below); needs rewrite |
 | 6 — Dashboard & Report | 🔄 Script ready (`dashboard.py`) |
 
-**Immediate next step:** Train Phase 3 classifiers (Logistic Regression baseline + XGBoost) on `data/features_expanded.csv`.
+**Immediate next step:** upgrade Phase 4 (`market_reaction.py`) and rewrite Phase 5 (`backtest.py`).
+
+**2026-11-07 — Phase 3 done (Velu):**
+- **Date bug found and fixed.** Scripts compared the call's full timestamp against daily price
+  dates, so a 9 a.m. call got "day 0" = the next day. Most calls (≈70%) are before or during
+  market hours, so the immediate window missed the real reaction day. Day 0 is now the call's
+  calendar date (`event_returns.py`; same fix in `collect_data.py`, `market_reaction.py`,
+  `backtest.py`). Checked: average absolute abnormal return is 1.1% on normal days, 2.6% on
+  day 0, 2.3% on day +1. Re-labelling with corrected dates keeps 97.7% of GOOD/BAD labels the same.
+  `features_expanded.csv`'s `label` column still holds the old labels; Phase 3 recomputes
+  labels from `prices.csv` and does not use it.
+- **First finding: the original setup had no signal.** All 31 features → GOOD/BAD (drift)
+  scored AUC ≈ 0.51 on a date split. Whole-document VADER compound is +1.0 on 99.5% of calls
+  (3 columns dropped).
+- **New design (two-step):** train on the *immediate* reaction (strong signal), use its
+  probability as the GOOD/BAD score, and test against the *drift* in Phase 4. Training directly
+  on drift was tried and ranks drift worse.
+- **New inputs:** change vs. the firm's previous call (`delta`), TF-IDF text scores, previous-call
+  similarity, pre-call return/volatility. `feature_study.py` picked delta + text + lm + market by
+  greedy selection on 2012–2017 only.
+- **Results (2018–2025 holdout, never used for choosing):** reaction AUC 0.588; score vs. drift
+  rank-corr +0.056 (t 3.3); top-20% minus bottom-20% drift +1.30%. No-language baseline: +0.02%.
+- **Phase 4 (old script, quick run):** high-confidence GOOD drift +1.02% vs. BAD +0.21%, p = 0.02
+  (plain t-test; overlapping windows mean the true p-value is somewhat larger).
+- **Phase 5 not trusted yet:** `backtest.py` chains thousands of overlapping 20-day trades as if
+  sequential and annualises Sharpe as ~12 trades/year, giving a meaningless −99.8% drawdown.
+  Outputs from that run were deleted. Needs a daily calendar-time long/short portfolio.
+- **Also:** Phase 4/5 scripts crash on Windows consoles (they print → and ≥); run with
+  `PYTHONIOENCODING=utf-8` until they are rewritten.
 
 **2026-11-03 — Local data regenerated and verified, unused data files removed:**
 - **Verified Velu's scaled dataset on Kartik's machine:** regenerated `data/master.csv` with `python collect_data.py --start 2005-01-01 --end 2025-12-31` (no `--force`, so it reused the committed `data/prices.csv`). Result: 10,493 rows, 5,638 GOOD / 4,855 BAD; every row matches `data/features_expanded.csv` on ticker + call date, and every label agrees.

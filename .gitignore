@@ -26,3 +26,6 @@ models/*.joblib
 
 # Temporary scripts
 bench_time.py
+
+# Phase 3 hashed-text cache (rebuilt automatically)
+data/_cache/

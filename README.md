@@ -24,7 +24,7 @@ that signal — or misses it (a tradeable inefficiency).
 | 0 | Setup & Foundation | ✅ Complete | Repository structure, universe definition, environment |
 | 1 | Data Collection | ✅ Complete | 10,493 calls collected (200 tickers, 2005–2025), labeled via abnormal returns |
 | 2 | Signal Extraction (Features) | ✅ Complete | 35 language features extracted per call → [`data/features_expanded.csv`](data/features_expanded.csv) |
-| 3 | Type Classifier (Good/Bad) | 🔄 Ready to train | Baseline Logistic Regression & XGBoost (`train_classifier.py`) |
+| 3 | Type Classifier (Good/Bad) | ✅ Complete | Walk-forward model, reaction AUC 0.59 on 2018–2025 → [`docxxs/Phase3_results.md`](docxxs/Phase3_results.md) |
 | 4 | Market-Reaction Test | 🔄 Script ready | Event study & Welch's t-test (`market_reaction.py`) |
 | 5 | Trading Backtest | 🔄 Script ready | Long/short portfolio simulation & Sharpe ratio (`backtest.py`) |
 | 6 | Dashboard & Report | 🔄 Script ready | Interactive Streamlit analytics UI (`dashboard.py`) |
@@ -82,7 +82,9 @@ Notes for step 1:
 ├── collect_data.py                     # Phase 1: Transcript scraping & return labeling
 ├── extract_features_fast.py            # Phase 2: Multi-process feature extraction orchestrator
 ├── _feat_worker.py                     # Phase 2: Parallel worker for NLP feature extraction
-├── train_classifier.py                 # Phase 3: Model training (Logistic Regression + XGBoost)
+├── event_returns.py                    # Shared event-window return helpers (corrected event dates)
+├── train_classifier.py                 # Phase 3: Walk-forward classifier (TF-IDF text + features)
+├── feature_study.py                    # Phase 3: Which feature groups help (greedy selection)
 ├── market_reaction.py                  # Phase 4: Market-reaction statistical tests
 ├── backtest.py                         # Phase 5: Trading strategy backtest simulation
 ├── dashboard.py                        # Phase 6: Streamlit interactive dashboard

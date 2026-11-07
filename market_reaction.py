@@ -1,7 +1,7 @@
 """
 Phase 4 — Market-Reaction Test
 ================================
-Compares immediate (day 0→+1) vs drift (day +2→+60) abnormal returns
+Compares immediate (day -1→+1) vs drift (day +2→+60) abnormal returns
 against Phase 3's predicted confidence, via Welch's t-test.
 
 Reads: data/predictions.csv, data/prices.csv, data/master.csv
@@ -24,14 +24,14 @@ MARKET_REACTION_CSV = Path("data/market_reaction.csv")
 RESULTS_MD          = Path("docxxs/Phase4_results.md")
 
 MARKET_INDEX  = "^GSPC"
-IMMEDIATE_WIN = (0, 1)   # day 0 → day +1
+IMMEDIATE_WIN = (-1, 1)  # close before the call → day +1
 DRIFT_WIN     = (2, 60)  # day +2 → day +60  (matches Phase 1 labelling window)
 
 
 def price_at_offset(series, call_date, offset):
-    idx = series.index.searchsorted(call_date)
+    idx = series.index.searchsorted(pd.Timestamp(call_date).normalize())  # day 0 = call date
     target = idx + offset
-    if target >= len(series):
+    if target < 0 or target >= len(series):
         return None
     return series.iloc[target]
 
@@ -100,7 +100,7 @@ def main():
     hi_bad  = df[df["confidence_good"] <= lo_thresh]
 
     results = {}
-    print("\n--- IMMEDIATE window (day 0→+1) ---")
+    print("\n--- IMMEDIATE window (day -1→+1) ---")
     t, p, ma, mb, na, nb = ttest(
         hi_good["immediate_ar"], hi_bad["immediate_ar"],
         "High-conf GOOD", "High-conf BAD")
@@ -119,7 +119,7 @@ def main():
         f"**Classifier used:** {pred_col}  ",
         f"**Confidence threshold:** top/bottom 30% (≥{hi_thresh:.3f} / ≤{lo_thresh:.3f})",
         "",
-        "## Immediate Window (day 0 → +1)",
+        "## Immediate Window (day −1 → +1)",
         "",
         f"| Group | N | Mean Abnormal Return |",
         f"|-------|---|---------------------|",

@@ -7,3 +7,9 @@ torch
 pysentiment2
 textstat
 nltk
+scikit-learn
+xgboost
+scipy
+joblib
+streamlit
+plotly

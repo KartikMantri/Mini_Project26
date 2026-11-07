@@ -154,7 +154,9 @@ def fetch_prices(tickers, start, end, out_path, force=False):
 
 def _price_at_offset(price_series, call_date, offset_trading_days):
     """Trading-day offset lookup: nearest trading day on/after call_date, then +N rows."""
-    idx = price_series.index.searchsorted(call_date)
+    # Drop the time of day: most calls are before/during market hours, so day 0 is the
+    # call date itself (comparing the full timestamp pushed day 0 a day too late).
+    idx = price_series.index.searchsorted(pd.Timestamp(call_date).normalize())
     target_idx = idx + offset_trading_days
     if target_idx >= len(price_series):
         return None
