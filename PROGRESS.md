@@ -17,12 +17,37 @@ connective narrative across phases, including decisions still being debated.
 | 0 — Setup & Foundation | ✅ Done |
 | 1 — Data Collection | ✅ Scaled: 10,493 calls across 200 tickers (2005–2025) |
 | 2 — Signal Extraction | ✅ Complete: 35 features extracted across 10,493 calls in `data/features_expanded.csv` |
-| 3 — Type Classifier | ✅ Complete: walk-forward model, reaction AUC 0.588 on 2018–2025 holdout |
-| 4 — Market-Reaction Test | 🔄 Script runs; needs upgrade (regression with controls, clustered errors) |
+| 3 — Type Classifier | ✅ Complete: walk-forward model, reaction AUC 0.596 on 2018–2025 holdout |
+| 4 — Market-Reaction Test | ✅ Complete: drift +1.3% top vs. bottom (p = 0.005, 2012–2025); holdout alone p = 0.09 |
 | 5 — Trading Backtest | 🔄 Script runs but its maths is wrong (see below); needs rewrite |
 | 6 — Dashboard & Report | 🔄 Script ready (`dashboard.py`) |
 
-**Immediate next step:** upgrade Phase 4 (`market_reaction.py`) and rewrite Phase 5 (`backtest.py`).
+**Immediate next step:** rewrite Phase 5 (`backtest.py`) as a daily calendar-time long/short portfolio.
+
+**2026-11-07 — Phase 4 done, Phase 3 frozen (Velu):**
+- **Phase 3 final addition:** `text_delta`, a TF-IDF model on the change in wording vs. the
+  firm's previous call. Validation AUC +0.0021 (above the 0.002 bar), holdout reaction AUC
+  0.588 → 0.596. Other tweaks (regularisation, LR+XGB average, training on big moves only,
+  firm-history z-scores) did not help — logged in `docxxs/Phase3_feature_study.md`. Model frozen.
+- **Phase 4 rewritten** (`market_reaction.py`): quintiles within quarter, top-minus-bottom spreads
+  tested across quarters (Newey-West), drift regressions with the immediate reaction and pre-call
+  return/volatility as controls, quarter fixed effects, standard errors clustered by quarter;
+  returns winsorized 1%/99%. No longer needs `data/master.csv`.
+- **Results:** immediate top − bottom +3.9% (t ≈ 10). Drift +1.3% over 2012–2025 (t 2.9,
+  p = 0.005; with controls p = 0.03), +1.2% on the 2018–2025 holdout alone (p = 0.09). About a
+  quarter of the total move comes after the reaction window, mostly from low-scored calls that
+  keep falling. Language-free model: no drift (p = 0.64).
+- **Interpretation:** the market prices most of the language signal at once; evidence of
+  under-reaction is modest, not conclusive. Phase 3's earlier "t = 3.3" used a looser test
+  (8 yearly values, no winsorizing); Phase 4's numbers are the ones to quote.
+- **Pandemic robustness check (Velu's idea):** without 2020–2021 calls the holdout drift is +1.75%
+  (p = 0.003; with controls p = 0.003); without all of 2020, +1.44% (p = 0.026). Removing only the
+  crash months (calls Dec 2019 – Jun 2020) changes nothing. In 2020–2021 the reaction AUC dropped to
+  0.55–0.58 (other years' median 0.60) and the drift vanished. Reported as robustness, not the
+  headline, because the exclusion was chosen after seeing the yearly results.
+- **Dropped regression:** a version adding the language-free score as a control was removed —
+  that score is built from the immediate reaction and pre-call return, so it double-counts them
+  and distorts the coefficients.
 
 **2026-11-07 — Phase 3 done (Velu):**
 - **Date bug found and fixed.** Scripts compared the call's full timestamp against daily price

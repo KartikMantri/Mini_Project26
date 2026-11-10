@@ -98,3 +98,22 @@ Feature groups:
 ---
 Regenerate with `python feature_study.py`. The chosen groups are copied into
 `FINAL` in `train_classifier.py`.
+
+## Later addition: `text_delta` (2026-11-07)
+
+A TF-IDF model on the *change* in wording vs. the firm's previous call (this call's TF-IDF
+minus the previous call's), trained walk-forward on the immediate reaction. Added to the
+greedy pick as one more step, judged by the same rule:
+
+| Inputs | Valid AUC | Gain | Holdout AUC |
+|---|---|---|---|
+| delta, text, lm, market (greedy pick) | 0.5953 | — | 0.5875 |
+| + text_delta | 0.5974 | +0.0021 (above the 0.002 bar) | 0.5962 |
+
+Other ideas tested the same way and **not** kept (holdout AUC with the greedy pick):
+stronger/weaker regularisation (0.587–0.589), averaging Logistic Regression with XGBoost
+(0.588), training only on moves above 1–2% (0.588–0.590), and features scaled against the
+firm's own history (0.572–0.583).
+
+The tables above predate `text_delta`; `text_delta` is now in `CANDIDATES`, so a rerun of
+this script includes it from the start.

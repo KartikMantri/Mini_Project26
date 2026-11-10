@@ -24,8 +24,8 @@ that signal — or misses it (a tradeable inefficiency).
 | 0 | Setup & Foundation | ✅ Complete | Repository structure, universe definition, environment |
 | 1 | Data Collection | ✅ Complete | 10,493 calls collected (200 tickers, 2005–2025), labeled via abnormal returns |
 | 2 | Signal Extraction (Features) | ✅ Complete | 35 language features extracted per call → [`data/features_expanded.csv`](data/features_expanded.csv) |
-| 3 | Type Classifier (Good/Bad) | ✅ Complete | Walk-forward model, reaction AUC 0.59 on 2018–2025 → [`docxxs/Phase3_results.md`](docxxs/Phase3_results.md) |
-| 4 | Market-Reaction Test | 🔄 Script ready | Event study & Welch's t-test (`market_reaction.py`) |
+| 3 | Type Classifier (Good/Bad) | ✅ Complete | Walk-forward model, reaction AUC 0.60 on 2018–2025 → [`docxxs/Phase3_results.md`](docxxs/Phase3_results.md) |
+| 4 | Market-Reaction Test | ✅ Complete | Score predicts drift +1.3% (p = 0.005, 2012–2025); modest under-reaction → [`docxxs/Phase4_results.md`](docxxs/Phase4_results.md) |
 | 5 | Trading Backtest | 🔄 Script ready | Long/short portfolio simulation & Sharpe ratio (`backtest.py`) |
 | 6 | Dashboard & Report | 🔄 Script ready | Interactive Streamlit analytics UI (`dashboard.py`) |
 
@@ -49,7 +49,7 @@ python train_classifier.py   # ~30 s; uses the committed data/text_scores.csv
 Every prediction is out-of-sample: each year is scored by a model trained only on earlier years.
 Rebuilding the text scores (`--rebuild-text`) needs local `data/master.csv`.
 
-Phase 4 (`market_reaction.py`) and the dashboard (`dashboard.py`) also read `data/master.csv`, which is not in Git — generate it locally using the steps below before running them.
+Phase 4 (`python market_reaction.py`) needs only committed files too. The dashboard's overview page also reads `data/master.csv`, which is not in Git — generate it locally using the steps below.
 
 ### Why Raw Transcript Files Are Excluded From Git
 Raw transcripts and intermediate files exceed GitHub's strict 100 MB per-file limit:

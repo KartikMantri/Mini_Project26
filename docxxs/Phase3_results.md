@@ -7,7 +7,7 @@ Inputs were chosen on the validation years 2012–2017 only
 Regenerate with `python train_classifier.py`.
 
 **Final model:** Logistic Regression trained to predict the immediate reaction
-(day −1 → +1) from: delta, text, lm, market (37 inputs). Its probability is the GOOD/BAD score.
+(day −1 → +1) from: delta, text, lm, market, text_delta (38 inputs). Its probability is the GOOD/BAD score.
 **GOOD/BAD:** GOOD if the drift (day +2 → +60 abnormal return) was positive.
 
 Columns: *Reaction AUC* — how well the score predicts the immediate reaction;
@@ -20,8 +20,8 @@ calls minus the 20% lowest, within each year.
 
 | Model | Reaction AUC | GOOD/BAD AUC | GOOD/BAD accuracy | Drift rank-corr (t) | Drift top-bottom 20% |
 |---|---|---|---|---|---|
-| **Final** — reaction-trained, Logistic Regression | 0.5875 | 0.5281 | 0.517 (majority 0.510) | +0.0561 (+3.3) | +1.30% |
-| Reaction-trained, XGBoost | 0.5813 | 0.5236 | 0.514 (majority 0.510) | +0.0509 (+2.4) | +1.43% |
+| **Final** — reaction-trained, Logistic Regression | 0.5962 | 0.5284 | 0.516 (majority 0.510) | +0.0598 (+2.9) | +1.24% |
+| Reaction-trained, XGBoost | 0.5896 | 0.5266 | 0.515 (majority 0.510) | +0.0551 (+2.4) | +1.48% |
 | Trained straight on GOOD/BAD (text + market + reaction) | — | 0.5305 | 0.492 (majority 0.510) | +0.0579 (+1.9) | +1.10% |
 | No language — market + reaction only | — | 0.5179 | 0.489 (majority 0.510) | +0.0248 (+1.0) | +0.02% |
 
@@ -29,34 +29,34 @@ calls minus the 20% lowest, within each year.
 
 | Model | Reaction AUC | GOOD/BAD AUC | GOOD/BAD accuracy | Drift rank-corr (t) | Drift top-bottom 20% |
 |---|---|---|---|---|---|
-| **Final** — reaction-trained, Logistic Regression | 0.5953 | 0.5168 | 0.520 (majority 0.575) | +0.0370 (+1.2) | +1.39% |
-| Reaction-trained, XGBoost | 0.5697 | 0.5122 | 0.516 (majority 0.575) | +0.0351 (+1.2) | +0.71% |
+| **Final** — reaction-trained, Logistic Regression | 0.5974 | 0.5202 | 0.523 (majority 0.575) | +0.0439 (+1.7) | +1.45% |
+| Reaction-trained, XGBoost | 0.5757 | 0.5177 | 0.526 (majority 0.575) | +0.0436 (+1.6) | +1.02% |
 | Trained straight on GOOD/BAD (text + market + reaction) | — | 0.5191 | 0.576 (majority 0.575) | +0.0155 (+1.4) | +0.64% |
 | No language — market + reaction only | — | 0.5216 | 0.577 (majority 0.575) | +0.0173 (+1.0) | +0.37% |
 
 ## Final model — GOOD/BAD confusion matrix (holdout)
 ```
              pred BAD  pred GOOD
-  actual BAD     1029      1434
-  actual GOOD     899      1471
+  actual BAD     1020      1443
+  actual GOOD     898      1472
 ```
 
 ## Largest coefficients (final model, standardised inputs)
 
 | Input | Coefficient | Direction |
 |---|---|---|
-| `text_full` | +0.205 | → reaction up |
-| `d_forward_looking_count` | -0.134 | → reaction down |
-| `d_fog_index` | -0.128 | → reaction down |
-| `d_avg_sentence_length` | +0.107 | → reaction up |
-| `d_vader_neg` | +0.106 | → reaction up |
-| `d_vader_qa_neg` | -0.100 | → reaction down |
-| `d_lm_net_sentiment` | +0.079 | → reaction up |
-| `d_sent_compound_mean` | +0.074 | → reaction up |
-| `d_vader_qa_pos` | +0.071 | → reaction up |
-| `d_qa_ratio` | -0.071 | → reaction down |
-| `d_sent_compound_max` | -0.070 | → reaction down |
+| `text_full` | +0.139 | → reaction up |
+| `text_delta` | +0.131 | → reaction up |
+| `d_forward_looking_count` | -0.126 | → reaction down |
+| `d_fog_index` | -0.117 | → reaction down |
+| `d_vader_neg` | +0.108 | → reaction up |
+| `d_avg_sentence_length` | +0.099 | → reaction up |
+| `d_vader_qa_neg` | -0.098 | → reaction down |
+| `d_qa_ratio` | -0.074 | → reaction down |
+| `d_sent_compound_mean` | +0.070 | → reaction up |
+| `d_lm_net_sentiment` | +0.070 | → reaction up |
 | `pre_ar` | -0.067 | → reaction down |
+| `d_sent_compound_max` | -0.066 | → reaction down |
 
 ## Reading these numbers
 - Short-term stock moves are mostly noise, so AUC 0.55–0.60 is a strong result for

@@ -67,6 +67,15 @@ class EventReturns:
         stock, mkt, a, b = hit
         return stock[b] / stock[a] - 1, mkt[b] / mkt[a] - 1
 
+    def path(self, ticker, call_date, start, end):
+        """Cumulative abnormal return from the close of day `start` to each day
+        start..end (array of length end-start+1), or None if prices are missing."""
+        hit = self._locate(ticker, call_date, start, end)
+        if hit is None:
+            return None
+        stock, mkt, a, b = hit
+        return (stock[a:b + 1] / stock[a] - 1) - (mkt[a:b + 1] / mkt[a] - 1)
+
     def volatility(self, ticker, call_date, window):
         """Std of daily abnormal returns over the window."""
         hit = self._locate(ticker, call_date, *window)

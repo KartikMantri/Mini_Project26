@@ -29,19 +29,22 @@ an honest out-of-sample measure of how well it works.
 | text | TF-IDF + logistic-regression score on the transcript words (full, prepared, Q&A) | ✅ |
 | lm | Loughran-McDonald positive / negative / uncertainty / net | ✅ |
 | market | 3-month abnormal return and volatility before the call | ✅ |
+| text_delta | TF-IDF model on the change in wording vs. the previous call | ✅ added later (+0.002 validation AUC) |
 | sentiment, style, qa | Phase 2 VADER, readability, Q&A dynamics (raw levels) | ❌ no gain once the above are in |
 | similarity | word overlap with the previous call | ❌ no gain |
 | — | whole-document VADER compound (3 columns) | ❌ dropped: +1.0 on 99.5% of calls |
 
-Final model: Logistic Regression on 37 inputs (it beat XGBoost on this data).
+Final model: Logistic Regression on 38 inputs (it beat XGBoost on this data).
 
 ## Results (holdout years 2018–2025)
-- Immediate reaction: **AUC 0.588**.
-- Later drift: rank correlation +0.056 (t = 3.3); the 20% highest-scored calls drift
-  **+1.30%** more than the 20% lowest over ~3 months.
+- Immediate reaction: **AUC 0.596** (0.588 before `text_delta` was added).
+- Later drift: rank correlation +0.060 (t = 2.9 across years); the 20% highest-scored calls
+  drift **+1.24%** more than the 20% lowest over ~3 months. Phase 4 tests this more strictly.
+- On calls with big price moves the model does much better: AUC ≈ 0.65 for moves over 3%,
+  ≈ 0.69 for moves over 6% (measured before `text_delta`).
 - A model without language (market + reaction only) gets +0.02% on the same comparison,
   so the drift signal comes from the language.
-- GOOD/BAD accuracy is 51.7% vs. 51.0% for always guessing the majority. The score is a
+- GOOD/BAD accuracy is 51.6% vs. 51.0% for always guessing the majority. The score is a
   ranking signal: it is useful at the extremes, not as a yes/no call on every firm.
 
 ## How to run

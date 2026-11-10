@@ -27,9 +27,10 @@ OUT_MD   = Path("docxxs/Phase3_feature_study.md")
 MIN_GAIN = 0.002   # smallest validation-AUC gain worth an extra group
 
 CANDIDATES = {
-    "y_imm":   ["sentiment", "lm", "style", "qa", "delta", "similarity", "text", "market"],
+    "y_imm":   ["sentiment", "lm", "style", "qa", "delta", "similarity", "text", "text_delta",
+                "market"],
     "y_drift": ["sentiment", "lm", "style", "qa", "delta", "similarity", "text",
-                "text_drift", "market", "reaction"],
+                "text_drift", "text_delta", "market", "reaction"],
 }
 TARGET_NAME = {"y_imm": "Reaction (day -1 to +1 up?)", "y_drift": "Type (drift day +2 to +60 up?)"}
 

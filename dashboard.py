@@ -301,7 +301,7 @@ elif page == "📉 Market Reaction":
         hi_bad  = mr[mr["confidence_good"] <= lo]
 
         for win, col_name, label in [
-            ("Immediate (day 0→+1)", "immediate_ar", "Immediate"),
+            ("Immediate (day −1→+1)", "immediate_ar", "Immediate"),
             ("Drift (day +2→+60)",   "drift_ar",     "Drift"),
         ]:
             st.markdown(f'<div class="section-header">{win} Abnormal Return</div>',

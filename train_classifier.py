@@ -94,13 +94,16 @@ GROUPS = {
     "similarity": ["sim_prev_full", "sim_prev_prepared", "sim_prev_qa"],
     "text":       ["text_full", "text_prepared", "text_qa"],
     "text_drift": ["text_drift_full", "text_drift_prepared", "text_drift_qa"],
+    "text_delta": ["text_delta"],     # change in wording vs. the previous call
     "market":     ["pre_ar", "pre_vol"],
     "reaction":   ["imm_ar"],          # only allowed for the drift (type) model
 }
 
 # Final configuration, chosen by feature_study.py on the 2012-2017 validation years
 # (the 2018-2025 years were not used for choosing). See docxxs/Phase3_feature_study.md.
-FINAL_GROUPS = ["delta", "text", "lm", "market"]   # greedy pick, Logistic Regression
+# text_delta was added later as the greedy procedure's next step: +0.0021 validation AUC,
+# above the 0.002 bar (see "Later addition" in Phase3_feature_study.md).
+FINAL_GROUPS = ["delta", "text", "lm", "market", "text_delta"]   # Logistic Regression
 FINAL_KIND   = "lr"
 
 # Models trained and reported. The first one is the final model; the rest are there
@@ -231,7 +234,7 @@ class TextModel:
     def _tfidf(self, X):
         return normalize(X[:, self.keep].multiply(self.idf).tocsr())
 
-    def fit(self, X, y):
+    def _learn_vocab(self, X):
         n = X.shape[0]
         dfreq = X.getnnz(axis=0)
         keep = np.where((dfreq >= self.min_df) & (dfreq <= self.max_df * n))[0]
@@ -239,6 +242,9 @@ class TextModel:
             keep = keep[np.argsort(-dfreq[keep])[:self.max_features]]
         self.keep = keep
         self.idf = (np.log((1 + n) / (1 + dfreq[keep])) + 1).astype(np.float32)
+
+    def fit(self, X, y):
+        self._learn_vocab(X)
         self.clf = LogisticRegression(C=self.C, max_iter=3000).fit(self._tfidf(X), y)
         return self
 
@@ -246,16 +252,36 @@ class TextModel:
         return self.clf.predict_proba(self._tfidf(X))[:, 1]
 
 
+class DeltaTextModel(TextModel):
+    """Same model, on the change in wording vs. the firm's previous call
+    (TF-IDF of this call minus TF-IDF of the previous one)."""
+
+    def fit(self, X, X_prev, y):
+        self._learn_vocab(X)
+        self.clf = LogisticRegression(C=self.C, max_iter=3000).fit(
+            self._tfidf(X) - self._tfidf(X_prev), y)
+        return self
+
+    def predict_proba(self, X, X_prev):
+        return self.clf.predict_proba(self._tfidf(X) - self._tfidf(X_prev))[:, 1]
+
+
+def previous_call_rows(df):
+    """Row of the same firm's previous call for every row (-1 if none)."""
+    order = df.sort_values(["ticker", "call_date"])
+    prev_row = order.groupby("ticker")["row_id"].shift(1).fillna(-1).astype(int)
+    prev = np.full(len(df), -1)
+    prev[order["row_id"].values] = prev_row.values
+    return prev
+
+
 def prev_call_similarity(df, X):
     """Cosine similarity between each call and the same firm's previous call."""
     Xn = normalize(X)
-    order = df.sort_values(["ticker", "call_date"])
-    prev_row = order.groupby("ticker")["row_id"].shift(1)
+    prev = previous_call_rows(df)
     sim = np.full(len(df), np.nan)
-    has = prev_row.notna().values
-    cur = order["row_id"].values[has]
-    prv = prev_row.values[has].astype(int)
-    sim[cur] = np.asarray(Xn[cur].multiply(Xn[prv]).sum(axis=1)).ravel()
+    cur = np.where(prev >= 0)[0]
+    sim[cur] = np.asarray(Xn[cur].multiply(Xn[prev[cur]]).sum(axis=1)).ravel()
     return sim
 
 
@@ -273,6 +299,17 @@ def build_text_scores(df):
                 df, target, TEXT_FIRST_TEST_YEAR,
                 fit=lambda tr, y: TextModel().fit(X[tr], y),
                 predict=lambda m, te: m.predict_proba(X[te]))
+
+    # Change in wording vs. the previous call (full transcript, reaction target)
+    print("[text] walk-forward text_delta ...")
+    X, prev = counts["full"], previous_call_rows(df)
+    has_prev = prev >= 0
+    delta = walk_forward(
+        df, "y_imm", TEXT_FIRST_TEST_YEAR,
+        fit=lambda tr, y: DeltaTextModel().fit(X[tr], X[prev[tr]], y),
+        predict=lambda m, te: m.predict_proba(X[te], X[np.maximum(prev[te], 0)]),
+        train_mask=has_prev)
+    out["text_delta"] = np.where(has_prev, delta, np.nan)
     out.to_csv(TEXT_SCORES_CSV, index=False)
     print(f"[text] saved -> {TEXT_SCORES_CSV}")
     return out
