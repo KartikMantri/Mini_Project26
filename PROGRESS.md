@@ -17,12 +17,50 @@ connective narrative across phases, including decisions still being debated.
 | 0 — Setup & Foundation | ✅ Done |
 | 1 — Data Collection | ✅ Scaled: 10,493 calls across 200 tickers (2005–2025); full 12,789-call set with corrected dates in `data/calls_all.csv` |
 | 2 — Signal Extraction | ✅ Rebuilt with FinBERT: `data/features_finbert.csv` (12,716 calls × 18 features). Phase 3 still reads the old VADER `data/features_expanded.csv` until it is switched over |
-| 3 — Type Classifier | ✅ Complete: walk-forward model, reaction AUC 0.588 on 2018–2025 holdout |
-| 4 — Market-Reaction Test | 🔄 Script runs; needs upgrade (regression with controls, clustered errors) |
+| 3 — Type Classifier | ✅ Re-run on FinBERT (`train_classifier_finbert.py`): reaction AUC 0.613 on the 2018–2025 holdout (VADER 0.588) |
+| 4 — Market-Reaction Test | ✅ Done on the FinBERT score (`market_reaction_finbert.py`): holdout drift +1.55% top vs bottom, p 0.002 |
 | 5 — Trading Backtest | 🔄 Script runs but its maths is wrong (see below); needs rewrite |
 | 6 — Dashboard & Report | 🔄 Script ready (`dashboard.py`) |
 
-**Immediate next step:** switch Phase 3 to `data/features_finbert.csv` + `data/calls_all.csv` (agree with Velu), and decide whether to drop `neg_share` or `tone_p10` (r = −0.97). After that: upgrade Phase 4 (`market_reaction.py`) and rewrite Phase 5 (`backtest.py`).
+**Immediate next step:** Phase 5, a backtest of the FinBERT score with trading costs (`backtest.py` needs a rewrite). The VADER pipeline is kept only as a comparison baseline.
+
+**2026-11-11 — Phase 4 on the FinBERT score (Kartik):**
+- **Setup:** `market_reaction_finbert.py` reads `data/predictions_finbert.csv`. It uses the
+  standard event-study tests with the same definitions as Velu's VADER Phase 4 (branch
+  `vadar-phase4`, not merged), so the results compare directly: within-quarter quintiles,
+  Newey-West t across quarters, drift regressions with quarter fixed effects and errors clustered
+  by quarter, controls for the immediate reaction and pre-call return/volatility. Velu's scores
+  were run through the same script as a check: it reproduces his holdout drift (+1.26% vs. his
+  reported +1.20%, both t 1.8).
+- **Note:** Velu's branch also changes Phase 3 (adds a `text_delta` input), so his Phase 4 baseline
+  is that model, not the 0.588-AUC one.
+- **Holdout 2018–2025:** immediate top − bottom **+3.93%** (t 13.5). Drift top − bottom
+  **+1.55%** (t 3.4, p 0.002); **+1.27%** with controls (p 0.018). 28% of the total move comes
+  after the reaction window. The language-free model's drift is +0.13% (p 0.78).
+- **vs VADER, same 4,822 holdout calls:** drift +1.75% (p 0.005) vs +1.26% (p 0.075); with
+  controls +1.41% (p 0.021) vs +1.12% (p 0.147). So FinBERT makes the under-reaction significant
+  on the holdout, where VADER's wasn't. Over 2012–2025 on the same calls the two are close (+1.42%
+  vs +1.37%). On the validation years alone, FinBERT's drift is weaker (+0.70%, p 0.07).
+- **Pandemic:** unlike Velu's run, FinBERT's drift stays positive in 2020 and 2021 and stays
+  significant when those years are dropped. The result doesn't depend on that period.
+- **Verdict:** the market prices most of the language signal immediately, and a smaller,
+  statistically significant part (~1.3–1.6% top vs bottom) drifts in over the next 60 trading
+  days: evidence of under-reaction. Results: `docxxs/Phase4_finbert_results.md`.
+
+**2026-11-11 — Phase 3 re-run on FinBERT features (Kartik):**
+- **Setup:** `train_classifier_finbert.py`, which uses Velu's walk-forward method (LR + XGBoost, inputs chosen
+  greedily on 2012–2017 only, holdout 2018–2025) as the main result, and Kartik's fixed split (train
+  before 2021-10-06 = 61-trading-day gap, test 2022–2025 once) as a check. 12,712 calls (4
+  unparseable dropped). Velu's VADER `train_classifier.py` kept unchanged as the baseline.
+- **Chosen on validation:** LR on FinBERT tone (8) + market (2). The greedy search added tone first
+  (+0.136 AUC), then market; TF-IDF text added nothing once tone was in.
+- **Holdout 2018–2025:** reaction AUC **0.613** (Velu VADER 0.588), GOOD/BAD AUC 0.535 (0.528),
+  top-minus-bottom 20% drift **+1.93%** (+1.30%), rank-corr t 2.9. On the same 4,833 calls as Velu:
+  0.611 vs 0.588 reaction AUC, +2.28% vs +1.30% drift spread.
+- **Fixed-split check (2022–2025):** reaction AUC 0.613, drift spread +2.29% (no-language model
+  +0.94%), so the result holds under both setups.
+- **Results:** `docxxs/Phase3_finbert_results.md`; predictions `data/predictions_finbert.csv`.
+  Phase 4 (`market_reaction.py`) still reads Velu's `data/predictions.csv` and needs switching.
 
 **2026-11-11 — Phase 2 FinBERT full run done, checks complete (Kartik):**
 - **Run:** all 12,716 non-stub calls, 198 tickers → `data/features_finbert.csv` (22 columns).

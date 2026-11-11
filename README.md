@@ -24,8 +24,8 @@ that signal — or misses it (a tradeable inefficiency).
 | 0 | Setup & Foundation | ✅ Complete | Repository structure, universe definition, environment |
 | 1 | Data Collection | ✅ Complete | 10,493 calls collected (200 tickers, 2005–2025), labeled via abnormal returns |
 | 2 | Signal Extraction (Features) | ✅ Rebuilt | 18 FinBERT/LM features for 12,716 calls → `data/features_finbert.csv`, documented in [`docxxs/features_finbert.md`](docxxs/features_finbert.md). Phase 3 still reads the old VADER file until switched |
-| 3 | Type Classifier (Good/Bad) | ✅ Complete | Walk-forward model, reaction AUC 0.59 on 2018–2025 → [`docxxs/Phase3_results.md`](docxxs/Phase3_results.md) |
-| 4 | Market-Reaction Test | 🔄 Script ready | Event study & Welch's t-test (`market_reaction.py`) |
+| 3 | Type Classifier (Good/Bad) | ✅ Complete | FinBERT walk-forward model, reaction AUC 0.61 on 2018–2025 (VADER: 0.59) → [`docxxs/Phase3_finbert_results.md`](docxxs/Phase3_finbert_results.md) |
+| 4 | Market-Reaction Test | ✅ Done (FinBERT) | Holdout drift top − bottom +1.55% (p 0.002), +1.27% with controls → [`docxxs/Phase4_finbert_results.md`](docxxs/Phase4_finbert_results.md) |
 | 5 | Trading Backtest | 🔄 Script ready | Long/short portfolio simulation & Sharpe ratio (`backtest.py`) |
 | 6 | Dashboard & Report | 🔄 Script ready | Interactive Streamlit analytics UI (`dashboard.py`) |
 
@@ -90,7 +90,9 @@ Notes for step 1:
 ├── _feat_worker.py                     # Phase 2: Parallel worker for NLP feature extraction
 ├── event_returns.py                    # Shared event-window return helpers (corrected event dates)
 ├── train_classifier.py                 # Phase 3: Walk-forward classifier (TF-IDF text + features)
+├── train_classifier_finbert.py         # Phase 3 (v2): same walk-forward on FinBERT features + fixed-split check
 ├── feature_study.py                    # Phase 3: Which feature groups help (greedy selection)
+├── market_reaction_finbert.py          # Phase 4 (v2): event-study tests on the FinBERT score
 ├── market_reaction.py                  # Phase 4: Market-reaction statistical tests
 ├── backtest.py                         # Phase 5: Trading strategy backtest simulation
 ├── dashboard.py                        # Phase 6: Streamlit interactive dashboard
