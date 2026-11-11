@@ -38,7 +38,7 @@ import pandas as pd
 from scipy import stats
 from sklearn.metrics import roc_auc_score
 
-from event_returns import PRE_WIN, EventReturns, load_prices
+from event_returns import BAD_PRICE_TICKERS, PRE_WIN, EventReturns, load_prices
 
 OURS_CSV   = Path("data/predictions_finbert.csv")
 VELU_CSV   = Path("data/_cache/velu_phase4_predictions.csv")
@@ -60,6 +60,7 @@ WINSOR = (0.01, 0.99)
 def load(csv, score_col, nolang_col, er):
     d = pd.read_csv(csv, parse_dates=["call_date"])
     d = d.rename(columns={score_col: "score", nolang_col: "nolang"})
+    d = d[~d["ticker"].isin(BAD_PRICE_TICKERS)]   # their stored returns are not real
     d = d.dropna(subset=["score", "imm_ar", "drift_ar"]).copy()
     d["pre_vol"] = [er.volatility(t, c, PRE_WIN) for t, c in zip(d["ticker"], d["call_date"])]
     for c in ("imm_ar", "drift_ar", "pre_ar", "pre_vol"):

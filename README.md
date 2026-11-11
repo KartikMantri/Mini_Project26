@@ -25,11 +25,15 @@ that signal — or misses it (a tradeable inefficiency).
 | 1 | Data Collection | ✅ Complete | 10,493 calls collected (200 tickers, 2005–2025), labeled via abnormal returns |
 | 2 | Signal Extraction (Features) | ✅ Rebuilt | 18 FinBERT/LM features for 12,716 calls → `data/features_finbert.csv`, documented in [`docxxs/features_finbert.md`](docxxs/features_finbert.md). Phase 3 still reads the old VADER file until switched |
 | 3 | Type Classifier (Good/Bad) | ✅ Complete | FinBERT walk-forward model, reaction AUC 0.61 on 2018–2025 (VADER: 0.59) → [`docxxs/Phase3_finbert_results.md`](docxxs/Phase3_finbert_results.md) |
-| 4 | Market-Reaction Test | ✅ Done (FinBERT) | Holdout drift top − bottom +1.55% (p 0.002), +1.27% with controls → [`docxxs/Phase4_finbert_results.md`](docxxs/Phase4_finbert_results.md) |
-| 5 | Trading Backtest | 🔄 Script ready | Long/short portfolio simulation & Sharpe ratio (`backtest.py`) |
-| 6 | Dashboard & Report | 🔄 Script ready | Interactive Streamlit analytics UI (`dashboard.py`) |
+| 4 | Market-Reaction Test | ✅ Done (FinBERT) | Holdout drift top − bottom +1.62% (p 0.002), +1.31% with controls (p 0.013) → [`docxxs/Phase4_finbert_results.md`](docxxs/Phase4_finbert_results.md) |
+| 5 | Trading Backtest | ✅ Done (FinBERT) | Long-short +6.9%/year after costs, Sharpe 0.74 (p 0.03), 2018–2025 → [`docxxs/Phase5_finbert_results.md`](docxxs/Phase5_finbert_results.md) |
+| 6 | Dashboard & Report | 🔄 Script ready | Interactive Streamlit analytics UI (`dashboard.py`), not yet switched to FinBERT |
 
 Full documentation for each phase lives in [`docxxs/`](docxxs/).
+**New to the project? Start with the one-page visual guide:**
+[`docxxs/project_flow_diagram.png`](docxxs/project_flow_diagram.png). It shows every phase, how the
+phases connect, the formulas used, a worked example, and expected vs current results. Regenerate it
+with `python docxxs/make_flow_diagram.py`.
 
 ---
 
@@ -94,7 +98,8 @@ Notes for step 1:
 ├── feature_study.py                    # Phase 3: Which feature groups help (greedy selection)
 ├── market_reaction_finbert.py          # Phase 4 (v2): event-study tests on the FinBERT score
 ├── market_reaction.py                  # Phase 4: Market-reaction statistical tests
-├── backtest.py                         # Phase 5: Trading strategy backtest simulation
+├── backtest_finbert.py                 # Phase 5 (v2): long-short backtest on the FinBERT score, costs, Sharpe
+├── backtest.py                         # Phase 5 (old): superseded, compounds overlapping trades
 ├── dashboard.py                        # Phase 6: Streamlit interactive dashboard
 │
 ├── data/

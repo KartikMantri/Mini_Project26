@@ -20,6 +20,12 @@ IMMEDIATE_WIN = (-1, 1)    # reaction to the call itself
 DRIFT_WIN     = (2, 60)    # what happens afterwards (Phase 1 label window)
 PRE_WIN       = (-61, -1)  # ~3 months before the call (momentum / volatility)
 
+# Tickers whose price series in data/prices.csv is not the company's real price. Their
+# returns come back as NaN everywhere. PARA: the series starts 2021-02-12 at ~83,000,
+# falls to ~6, has 22% zero-change days and a 0.05 correlation with the S&P 500 (no sign
+# of the March 2021 Archegos crash), so it is some other instrument under that symbol.
+BAD_PRICE_TICKERS = {"PARA"}
+
 
 def event_day(call_date):
     """Calendar date of the call, with the time of day dropped."""
@@ -33,7 +39,7 @@ class EventReturns:
         market = prices[MARKET_INDEX]
         self._data = {}
         for ticker in prices.columns:
-            if ticker == MARKET_INDEX:
+            if ticker == MARKET_INDEX or ticker in BAD_PRICE_TICKERS:
                 continue
             stock = prices[ticker].dropna()
             mkt = market.reindex(stock.index)

@@ -30,10 +30,12 @@ import argparse
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.metrics import roc_auc_score
+from sklearn.pipeline import Pipeline
 
-from event_returns import PRE_WIN, EventReturns, load_prices
+from event_returns import BAD_PRICE_TICKERS, PRE_WIN, EventReturns, load_prices
 from extract_features_finbert import FEATURES
 from train_classifier import (HOLDOUT_YEARS, TEXT_FIRST_TEST_YEAR, FIRST_TEST_YEAR,
                               VALID_YEARS, TABLE_HEAD, TextModel, _split_sections,
@@ -73,8 +75,37 @@ FINBERT_GROUPS = ["tone", "fls", "lm", "style", "delta"]
 CANDIDATES = ["tone", "fls", "lm", "style", "delta", "similarity", "text", "market"]
 
 
+CLIP_COLS = ["pre_ar", "pre_vol", "imm_ar"]   # return inputs with fat tails
+CLIP_Q    = (0.01, 0.99)
+
+
 def cols_for(groups):
     return [c for g in groups for c in GROUPS[g]]
+
+
+class TrainClipper(BaseEstimator, TransformerMixin):
+    """Caps the given columns at the 1st / 99th percentile of the TRAINING rows only,
+    so a few extreme returns cannot dominate the fit and no future data sets the caps."""
+
+    def __init__(self, idx=()):
+        self.idx = idx
+
+    def fit(self, X, y=None):
+        idx = list(self.idx)
+        self.lo_ = np.nanquantile(X[:, idx], CLIP_Q[0], axis=0) if idx else []
+        self.hi_ = np.nanquantile(X[:, idx], CLIP_Q[1], axis=0) if idx else []
+        return self
+
+    def transform(self, X):
+        X = np.array(X, dtype=float, copy=True)
+        for j, lo, hi in zip(self.idx, self.lo_, self.hi_):
+            X[:, j] = np.clip(X[:, j], lo, hi)   # NaN stays NaN
+        return X
+
+
+def make_model(kind, cols):
+    idx = tuple(i for i, c in enumerate(cols) if c in CLIP_COLS)
+    return Pipeline([("clip", TrainClipper(idx)), ("model", make_tabular(kind))])
 
 
 # ---------------------------------------------------------------------------
@@ -91,6 +122,12 @@ def build_dataset():
                         parse_dates=["call_date"])
     df = df.merge(calls, on=["ticker", "call_date"], how="left", validate="one_to_one")
     assert np.allclose(df["drift_ar"], df["abnormal_return"], equal_nan=True)
+    # calls_all.csv was built from the bad PARA prices: keep the calls (their text feeds
+    # the change-since-last-call features) but never use them as labels or score them.
+    bad_px = df["ticker"].isin(BAD_PRICE_TICKERS)
+    print(f"[data] blanking returns for {bad_px.sum()} calls with bad prices "
+          f"({', '.join(sorted(BAD_PRICE_TICKERS))})")
+    df.loc[bad_px, ["imm_ar", "drift_ar"]] = np.nan
 
     er = EventReturns(load_prices())
     keys = list(zip(df["ticker"], df["call_date"]))
@@ -116,8 +153,10 @@ def build_dataset():
 
 def hash_texts(df, min_global_df=5):
     print("[text] reading transcripts ...")
+    # dtype=object keeps plain Python strings; converting pandas' Arrow strings with
+    # .tolist() needs a second full copy of ~600 MB of text and runs out of memory
     txt = pd.read_csv(CALLS_CSV, usecols=["ticker", "call_date", "transcript_text"],
-                      parse_dates=["call_date"])
+                      parse_dates=["call_date"], dtype={"transcript_text": object})
     txt = df[["ticker", "call_date"]].merge(txt, on=["ticker", "call_date"], how="left")
     texts = txt["transcript_text"].fillna("").tolist()
     del txt
@@ -173,10 +212,11 @@ def uses_text(groups):
 
 
 def run_wf(df, target, groups, kind):
-    X = df[cols_for(groups)].values.astype(float)
+    cols = cols_for(groups)
+    X = df[cols].values.astype(float)
     mask = (df["year"] >= TEXT_FIRST_TEST_YEAR).values if uses_text(groups) else None
     return walk_forward(df, target, FIRST_TEST_YEAR,
-                        fit=lambda tr, y: make_tabular(kind).fit(X[tr], y),
+                        fit=lambda tr, y: make_model(kind, cols).fit(X[tr], y),
                         predict=lambda m, te: m.predict_proba(X[te])[:, 1],
                         train_mask=mask)
 
@@ -186,12 +226,13 @@ def run_fixed(df, target, groups, kind):
     days = load_prices().index
     test_start = pd.Timestamp(FIXED_TEST_START)
     cutoff = days[days.searchsorted(test_start) - LABEL_GAP_DAYS]
-    X = df[cols_for(groups)].values.astype(float)
+    cols = cols_for(groups)
+    X = df[cols].values.astype(float)
     tr = (df["call_date"] < cutoff) & df[target].notna()
     if uses_text(groups):
         tr &= df["year"] >= TEXT_FIRST_TEST_YEAR
     te = (df["call_date"] >= test_start).values
-    model = make_tabular(kind).fit(X[tr.values], df.loc[tr, target].astype(int))
+    model = make_model(kind, cols).fit(X[tr.values], df.loc[tr, target].astype(int))
     proba = np.full(len(df), np.nan)
     proba[te] = model.predict_proba(X[te])[:, 1]
     return proba, int(tr.sum()), cutoff

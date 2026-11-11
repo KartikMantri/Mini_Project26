@@ -10,19 +10,49 @@ connective narrative across phases, including decisions still being debated.
 
 ---
 
-## Current snapshot (as of 2026-11-11)
+## Current snapshot (as of 2026-11-12)
 
 | Phase | Status |
 |---|---|
 | 0 — Setup & Foundation | ✅ Done |
 | 1 — Data Collection | ✅ Scaled: 10,493 calls across 200 tickers (2005–2025); full 12,789-call set with corrected dates in `data/calls_all.csv` |
 | 2 — Signal Extraction | ✅ Rebuilt with FinBERT: `data/features_finbert.csv` (12,716 calls × 18 features). Phase 3 still reads the old VADER `data/features_expanded.csv` until it is switched over |
-| 3 — Type Classifier | ✅ Re-run on FinBERT (`train_classifier_finbert.py`): reaction AUC 0.613 on the 2018–2025 holdout (VADER 0.588) |
-| 4 — Market-Reaction Test | ✅ Done on the FinBERT score (`market_reaction_finbert.py`): holdout drift +1.55% top vs bottom, p 0.002 |
-| 5 — Trading Backtest | 🔄 Script runs but its maths is wrong (see below); needs rewrite |
-| 6 — Dashboard & Report | 🔄 Script ready (`dashboard.py`) |
+| 3 — Type Classifier | ✅ Re-run on FinBERT (`train_classifier_finbert.py`): reaction AUC 0.611 on the 2018–2025 holdout (VADER 0.588) |
+| 4 — Market-Reaction Test | ✅ Done on the FinBERT score (`market_reaction_finbert.py`): holdout drift +1.62% top vs bottom (p 0.002), +1.31% with controls (p 0.013) |
+| 5 — Trading Backtest | ✅ Done (`backtest_finbert.py`): long-short +6.9%/year after costs, Sharpe 0.74, p 0.032, on the 2018–2025 holdout |
+| 6 — Dashboard & Report | 🔄 Script ready (`dashboard.py`), still reads the old VADER outputs |
 
-**Immediate next step:** Phase 5, a backtest of the FinBERT score with trading costs (`backtest.py` needs a rewrite). The VADER pipeline is kept only as a comparison baseline.
+**Immediate next step:** Phase 6, switch the dashboard to the FinBERT outputs and write the report. The VADER pipeline is kept only as a comparison baseline.
+
+**2026-11-12 — PARA price fix, Phases 3–4 re-run, Phase 5 done (Kartik):**
+- **PARA prices are not Paramount's.** The series in `data/prices.csv` starts 2021-02-12 at
+  ~83,000, falls to ~6, has 22% zero-change days and a 0.05 correlation with the S&P 500 (no
+  sign of the March 2021 Archegos crash). A scan of all 200 tickers found no other bad series
+  (AIG, UAL, VRTX, LNG big moves are real). `event_returns.BAD_PRICE_TICKERS` now returns no
+  prices for PARA; Phase 3 blanks the returns of its 77 calls (their text still feeds the
+  change-since-last-call features); Phase 4 drops them.
+- **Phase 3 change:** pre_ar, pre_vol and imm_ar are capped at the 1st/99th percentile of each
+  fit's training rows (`TrainClipper`), so no future data sets the caps. Transcripts are now read
+  as plain Python strings; the Arrow-string `.tolist()` ran out of memory.
+- **Phase 3 after the fix:** same pick (LR on tone + market, validation AUC 0.640). Holdout
+  reaction AUC 0.611 (was 0.613), drift top − bottom +2.25% (was +1.93%).
+- **Phase 4 after the fix (holdout):** immediate +3.94% (t 13.2); drift **+1.62%** (t 3.4,
+  p 0.002); with controls **+1.31%** (p 0.013); no-language model −0.36% (p 0.53). Validation
+  2012–17 drift **+0.85% (p 0.031)**, was +0.70% (p 0.072). VADER on the same calls: +1.40%
+  (p 0.059), +1.29% with controls (p 0.099).
+- **Phase 5 (`backtest_finbert.py`), method:** at each call, LONG if its score is in the top 20%
+  of the past 365 days' scores, SHORT if in the bottom 20% (no look-ahead, unlike Phase 4's
+  within-quarter ranks). Enter at day +2's close, exit at day +60's. Daily equal-weight long leg
+  minus short leg. 10 bps per buy or sell, 0.5%/year short borrow. Nothing was tuned on the
+  backtest. The old `backtest.py` is kept but not used: it compounded overlapping trades.
+- **Phase 5, holdout 2018 – May 2025:** **+6.9%/year after costs, Sharpe 0.74, max drawdown
+  −14.1%, t 2.14 (p 0.032)**; before costs +9.4%, Sharpe 1.01. Beta to the S&P 500 0.10.
+  Break-even cost 46 bps per trade. 2,315 trades, 54% profitable after costs. No-language score
+  −4.7%/year; Velu's VADER score +5.9%/year, Sharpe 0.56 (p 0.11). S&P 500 over the same dates
+  +12.9%/year, Sharpe 0.64, drawdown −33.9%.
+- **Phase 5 caveats:** 2020 alone gave +24% (holdout ≈ +4.4%/year without it). Validation
+  2012–17 is weaker: +3.1%/year, Sharpe 0.50, p 0.24 after costs (p 0.035 before), and there
+  the short side lost money. Survivorship bias (today's 200 tickers).
 
 **2026-11-11 — Phase 4 on the FinBERT score (Kartik):**
 - **Setup:** `market_reaction_finbert.py` reads `data/predictions_finbert.csv`. It uses the

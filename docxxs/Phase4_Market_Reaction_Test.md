@@ -1,6 +1,7 @@
 # Phase 4 — Market-Reaction Test (Event Study)
 
-**Status:** ✅ Done on the FinBERT score (2026-11-11). Results:
+**Status:** ✅ Done on the FinBERT score (2026-11-11; re-run 2026-11-12 after the PARA price
+fix). Results:
 [`Phase4_finbert_results.md`](Phase4_finbert_results.md). Script:
 [`market_reaction_finbert.py`](../market_reaction_finbert.py).
 
@@ -23,13 +24,17 @@ scientific core of the project.
    finding).
 
 ## Result (holdout 2018–2025)
-- Immediate top − bottom **+3.93%** (t 13.5): the market reacts strongly to the language.
-- Drift top − bottom **+1.55%** (p 0.002), **+1.27%** with controls (p 0.018): a smaller part
-  of the signal is priced in only over the following weeks, so there is evidence of
-  under-reaction.
-- A model without language shows no drift (+0.13%, p 0.78).
+- Immediate top − bottom **+3.94%** (t 13.2): the market reacts strongly to the language.
+- Drift top − bottom **+1.62%** (p 0.002), **+1.31%** with controls (p 0.013): a smaller part
+  of the signal (29% of the total move) is priced in only over the following weeks, so there
+  is evidence of under-reaction.
+- A model without language shows no drift (−0.36%, p 0.53).
+- Validation years 2012–2017: drift +0.85% (p 0.031).
 - Velu's VADER version (branch `vadar-phase4`), run through the same tests on the same calls:
-  +1.26% (p 0.075), +1.12% with controls (p 0.147), not significant on the holdout.
+  +1.40% (p 0.059), +1.29% with controls (p 0.099), not significant at 5% on the holdout.
+- PARA calls are excluded: its series in `data/prices.csv` is not Paramount's price
+  (see `event_returns.py`).
 
 ## Next
-→ Phase 5 — Trading Backtest: is the drift large enough to trade after costs?
+→ Phase 5 — Trading Backtest: is the drift large enough to trade after costs? Yes, modestly:
+see [`Phase5_Trading_Backtest.md`](Phase5_Trading_Backtest.md).
