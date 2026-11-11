@@ -10,19 +10,77 @@ connective narrative across phases, including decisions still being debated.
 
 ---
 
-## Current snapshot (as of 2026-11-07)
+## Current snapshot (as of 2026-11-11)
 
 | Phase | Status |
 |---|---|
 | 0 — Setup & Foundation | ✅ Done |
-| 1 — Data Collection | ✅ Scaled: 10,493 calls across 200 tickers (2005–2025) |
-| 2 — Signal Extraction | ✅ Complete: 35 features extracted across 10,493 calls in `data/features_expanded.csv` |
+| 1 — Data Collection | ✅ Scaled: 10,493 calls across 200 tickers (2005–2025); full 12,789-call set with corrected dates in `data/calls_all.csv` |
+| 2 — Signal Extraction | ✅ Rebuilt with FinBERT: `data/features_finbert.csv` (12,716 calls × 18 features). Phase 3 still reads the old VADER `data/features_expanded.csv` until it is switched over |
 | 3 — Type Classifier | ✅ Complete: walk-forward model, reaction AUC 0.588 on 2018–2025 holdout |
 | 4 — Market-Reaction Test | 🔄 Script runs; needs upgrade (regression with controls, clustered errors) |
 | 5 — Trading Backtest | 🔄 Script runs but its maths is wrong (see below); needs rewrite |
 | 6 — Dashboard & Report | 🔄 Script ready (`dashboard.py`) |
 
-**Immediate next step:** upgrade Phase 4 (`market_reaction.py`) and rewrite Phase 5 (`backtest.py`).
+**Immediate next step:** switch Phase 3 to `data/features_finbert.csv` + `data/calls_all.csv` (agree with Velu), and decide whether to drop `neg_share` or `tone_p10` (r = −0.97). After that: upgrade Phase 4 (`market_reaction.py`) and rewrite Phase 5 (`backtest.py`).
+
+**2026-11-11 — Phase 2 FinBERT full run done, checks complete (Kartik):**
+- **Run:** all 12,716 non-stub calls, 198 tickers → `data/features_finbert.csv` (22 columns).
+  About 1.1 s per call in practice (≈ 4 h, not the 2.1 h the trial suggested); one laptop standby
+  pause, survived thanks to per-ticker checkpoints in `data/finbert_cache/`.
+- **Data problems found:** 4 transcripts (AMD 2006, MSFT 2006, PEP 2009, PLD 2010) have no line
+  breaks between speakers, so every FinBERT feature is blank and `log_word_count` = 0. They should be
+  dropped in Phase 3. About 330 calls have no analyst/executive roles (Q&A features blank) and 27
+  have a failed prepared/Q&A split.
+- **Correlations** (`analyze_features_finbert.py`, heatmap `results/feature_correlation.png`):
+  only one pair above 0.85, `neg_share`–`tone_p10` (−0.97), which is a near-duplicate. The tone block
+  splits into a *level* group (the three section tones, `neg_share`, `tone_p10`) and a *spread*
+  measure (`tone_std`, unrelated to the level). `lm_uncertainty_pct`–`lm_weak_modal_pct` is 0.61
+  (moderate). `tone_gap` correlates 0.77 with `prep_net_tone` (partly mechanical, since it is computed from it), so
+  that hypothesis failed. `delta_tone`, `specific_fls_share` and `numeric_density` stay weakly
+  related to tone (≤ 0.32), as hoped.
+- **Length artifacts:** none. Every feature has |r| < 0.12 with `log_word_count`.
+- **GOOD vs BAD t-tests (pre-2018 only, report only):** executive-answer tone (p 0.001), prepared
+  tone (p 0.005), `tone_p10` (p 0.006), weak modals (p 0.02) and `neg_share` (p 0.03) differ in
+  the expected direction (GOOD calls sound slightly more positive). The effects are tiny
+  (Cohen's d ≤ 0.08), and only executive-answer tone survives a Bonferroni correction. VADER
+  showed nothing here, so this is an improvement, but expect only a small gain in Phase 3 AUC.
+- **Downstream:** Phase 3 must switch inputs to `features_finbert.csv`, drop the 4 unparseable rows,
+  and handle blanks (the walk-forward models need imputation or NaN-aware XGBoost).
+
+**2026-11-11 — Phase 2 rebuild with FinBERT started (Kartik), 50-call trial done:**
+- **Why:** Velu's 2026-11-07 check found whole-document VADER compound at +1.0 on 99.5% of calls,
+  and research favours FinBERT on financial text. 16 of the 31 Phase 2 features came from VADER
+  (10 section-level `vader_*` plus 6 paragraph-level `sent_compound_*` / `pct_*_sents`).
+- **Label definition checked (`collect_data.py`):** ±2% abnormal return over trading days +2 → +60,
+  NEUTRAL dropped. `docxxs/features.md` wrongly says ±1% and +2 → +62.
+- **Full call set relabelled (`build_call_dataset.py` → `data/calls_all.csv`, gitignored):**
+  12,789 calls, including the 2,296 Phase 1 NEUTRAL calls, which a real strategy couldn't have
+  excluded in advance. Returns use Velu's corrected event dates (`event_returns.py`): `imm_ar`
+  (day −1 → +1), `drift_ar` (+2 → +60), `label` = GOOD if `drift_ar` > 0 (6,817 GOOD / 5,972 BAD).
+  All 10,493 old calls are included, and 97.7% keep their old label. 73 stub transcripts
+  (< 1,000 words, mostly empty 2007 files) are flagged `is_stub` and skipped.
+  `master.csv` and `features_expanded.csv` are unchanged, so Phase 3 still runs as before.
+- **New features (`extract_features_finbert.py`):** 18 per call, scored per sentence with
+  `yiyanghkust/finbert-tone` and `yiyanghkust/finbert-fls` (label orders read from each config:
+  tone 0 Neutral / 1 Positive / 2 Negative; FLS 0 Not / 1 Non-specific / 2 Specific). Tone level
+  (prepared, executive answers, analyst questions), bad moments (`neg_share`, `tone_p10`,
+  `tone_std`), contrast (`tone_gap`, `delta_tone` vs the same ticker's previous call),
+  specificity (`specific_fls_share`, `fls_density`), full Loughran-McDonald dictionary
+  (uncertainty, weak/strong modal, negative), `numeric_density`, `qa_directness` (executive
+  answers only), `log_word_count`, and `fog_index`, kept as the one readability measure since
+  `flesch_ease` (r = −0.92) and `avg_sentence_length` (r = 0.78) duplicate it.
+- **Text handling:** Q&A split at the 2nd "Operator:" (works for ~94–97% of calls). In Q&A, the first
+  speaker after an Operator turn who didn't speak in the prepared remarks is the analyst. Checked
+  against 76 calls that mark turns "Q -" / "A -": 96.1% of Q&A sentences tagged correctly.
+- **50-call trial (RTX 4050):** 0.59 s per call, so ~2.1 h for all 12,716 non-stub calls. No
+  unexpected blanks (only `delta_tone` on each ticker's first call). Early sanity: prepared
+  remarks are more positive than executive answers (mean `tone_gap` +0.18), and analyst questions
+  are close to neutral (mean −0.02). Two parsing bugs were found and fixed in the trial: long
+  "Name - Title" speaker labels were missed, and a single stray "Q –" label switched a whole call
+  to markup mode.
+- **Downstream:** Phase 3 needs updating to read `data/features_finbert.csv` and the 12,789-call
+  set; to agree with Velu.
 
 **2026-11-07 — Phase 3 done (Velu):**
 - **Date bug found and fixed.** Scripts compared the call's full timestamp against daily price

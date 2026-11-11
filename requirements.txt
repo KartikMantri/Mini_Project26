@@ -10,3 +10,8 @@ scipy
 joblib
 plotly
 streamlit
+torch
+transformers
+pysentiment2
+pyarrow
+matplotlib

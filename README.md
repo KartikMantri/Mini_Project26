@@ -23,7 +23,7 @@ that signal — or misses it (a tradeable inefficiency).
 |---|---|---|---|
 | 0 | Setup & Foundation | ✅ Complete | Repository structure, universe definition, environment |
 | 1 | Data Collection | ✅ Complete | 10,493 calls collected (200 tickers, 2005–2025), labeled via abnormal returns |
-| 2 | Signal Extraction (Features) | ✅ Complete | 35 language features extracted per call → [`data/features_expanded.csv`](data/features_expanded.csv) |
+| 2 | Signal Extraction (Features) | ✅ Rebuilt | 18 FinBERT/LM features for 12,716 calls → `data/features_finbert.csv`, documented in [`docxxs/features_finbert.md`](docxxs/features_finbert.md). Phase 3 still reads the old VADER file until switched |
 | 3 | Type Classifier (Good/Bad) | ✅ Complete | Walk-forward model, reaction AUC 0.59 on 2018–2025 → [`docxxs/Phase3_results.md`](docxxs/Phase3_results.md) |
 | 4 | Market-Reaction Test | 🔄 Script ready | Event study & Welch's t-test (`market_reaction.py`) |
 | 5 | Trading Backtest | 🔄 Script ready | Long/short portfolio simulation & Sharpe ratio (`backtest.py`) |
@@ -83,6 +83,9 @@ Notes for step 1:
 ├── tickers.csv                         # 200-ticker S&P universe (ticker, sector)
 │
 ├── collect_data.py                     # Phase 1: Transcript scraping & return labeling
+├── build_call_dataset.py               # Phase 1: All 12,789 calls with corrected-date returns → data/calls_all.csv
+├── extract_features_finbert.py         # Phase 2 (v2): 18 FinBERT/LM features per call → data/features_finbert.csv
+├── analyze_features_finbert.py         # Phase 2 (v2): correlation heatmap, length check, GOOD/BAD t-tests
 ├── extract_features_fast.py            # Phase 2: Multi-process feature extraction orchestrator
 ├── _feat_worker.py                     # Phase 2: Parallel worker for NLP feature extraction
 ├── event_returns.py                    # Shared event-window return helpers (corrected event dates)
