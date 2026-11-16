@@ -66,8 +66,9 @@ PERIOD_NAME = {"holdout": "Holdout 2018–2025", "valid": "Validation 2012–201
 # Signal: real-time cut-offs
 # ---------------------------------------------------------------------------
 
-def assign_sides(calls, col):
-    """+1 / -1 / 0 per call, from cut-offs over the previous LOOKBACK_DAYS of scores."""
+def assign_sides(calls, col, top=TOP, bottom=TOP):
+    """+1 / -1 / 0 per call, from cut-offs over the previous LOOKBACK_DAYS of scores:
+    LONG if in the top `top` fraction, SHORT if in the bottom `bottom` fraction."""
     d = calls.dropna(subset=[col]).sort_values("call_date").reset_index(drop=True)
     day = d["call_date"].dt.normalize().values
     s = d[col].values
@@ -79,7 +80,7 @@ def assign_sides(calls, col):
         b = np.searchsorted(day, day[i])            # strictly earlier calendar days
         if b - a < MIN_HISTORY:
             continue
-        lo_cut[i], hi_cut[i] = np.quantile(s[a:b], [TOP, 1 - TOP])
+        lo_cut[i], hi_cut[i] = np.quantile(s[a:b], [bottom, 1 - top])
         side[i] = 1 if s[i] >= hi_cut[i] else (-1 if s[i] <= lo_cut[i] else 0)
     d["score"], d["side"], d["cut_lo"], d["cut_hi"] = s, side, lo_cut, hi_cut
     return d[["ticker", "call_date", "score", "cut_lo", "cut_hi", "side"]]
@@ -161,12 +162,13 @@ def daily_portfolio(paths, m, long_only=False):
         exits[sd][x] += 1
 
     mr = m.mkt_ret
-    leg_ret, turnover = {}, np.zeros(n)
+    leg_ret, leg_turn = {}, {}
     for sd in (1, -1):
         cnt = leg_n[sd]
         leg_ret[sd] = np.where(cnt > 0, leg_sum[sd] / np.maximum(cnt, 1), mr)
         held_next = np.r_[cnt[1:], 0]             # positions held over the next day
-        turnover += enters[sd] / np.maximum(held_next, 1) + exits[sd] / np.maximum(cnt, 1)
+        leg_turn[sd] = enters[sd] / np.maximum(held_next, 1) + exits[sd] / np.maximum(cnt, 1)
+    turnover = leg_turn[1] + leg_turn[-1]
     active = (leg_n[1] > 0) | (leg_n[-1] > 0)
     if long_only:
         gross = np.where(leg_n[1] > 0, leg_ret[1] - mr, 0.0)
@@ -174,8 +176,11 @@ def daily_portfolio(paths, m, long_only=False):
     else:
         gross = np.where(active, leg_ret[1] - leg_ret[-1], 0.0)
         short_exp = (leg_n[-1] > 0).astype(float)
+    # per-leg columns are used by backtest_finbert_2to1.py (unequal leg sizes)
     return pd.DataFrame({"gross": gross, "turnover": turnover, "short_exp": short_exp,
-                         "n_long": leg_n[1], "n_short": leg_n[-1]}, index=m.dates)
+                         "n_long": leg_n[1], "n_short": leg_n[-1],
+                         "long_ret": leg_ret[1], "short_ret": leg_ret[-1],
+                         "turn_long": leg_turn[1], "turn_short": leg_turn[-1]}, index=m.dates)
 
 
 def net_returns(day, cost_bps=COST_BPS):

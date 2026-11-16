@@ -34,3 +34,12 @@ bench_time.py
 
 # Phase 3 hashed-text cache (rebuilt automatically)
 data/_cache/
+
+# Research paper and its build files (kept local, not pushed)
+docxxs/Research_Paper.md
+docxxs/Research_Paper.pdf
+docxxs/_paper_build.html
+docxxs/make_paper_pdf.py
+docxxs/make_paper_figures.py
+docxxs/fig_quintiles.png
+docxxs/fig_car_paths.png
