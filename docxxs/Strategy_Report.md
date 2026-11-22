@@ -9,7 +9,7 @@ Phase 5 strategy report, November 2026
 
 ## Summary
 
-We tested five ways of trading the FinBERT earnings-call score. Each uses only information
+We tested seven ways of trading the FinBERT earnings-call score. Each uses only information
 available at the time and is evaluated after trading costs on the untouched 2018 – May 2025
 holdout.
 
@@ -20,13 +20,16 @@ holdout.
 | C | Tilted 2:1, top 20% / bottom 10% | +13.4% | 0.97 | −21.0% | +6.2% (0.027) |
 | D | Tilted 2:1, top 15% / bottom 15% | +13.3% | 0.93 | −20.2% | +6.0% (0.045) |
 | E | Long-only, top 15% | +18.1% | 0.81 | −37.5% | +4.9% (0.101) |
+| F | Tilted 2:1, top 5% / bottom 5% | +13.1% | 0.76 | −27.8% | +5.9% (0.175) |
+| G | Tilted 2:1, top 10% / bottom 5% | +13.3% | 0.84 | −22.6% | +5.9% (0.129) |
 | | *Buy every call (no score)* | +13.6% | 0.67 | −38.9% | +1.0% (0.62) |
 | | *S&P 500 buy-and-hold* | +12.8% | 0.63 | −33.9% | — |
 
 **Did we beat the market?**
 - **On a risk-adjusted basis, yes.** Every FinBERT approach has a higher Sharpe ratio than the
   S&P 500, and earns about **5–6% a year beyond what its market exposure explains** (alpha).
-  That alpha is statistically significant for the three tilted strategies.
+  That alpha is statistically significant for the tilted strategies with 10–20% cut-offs
+  (B, C, D), but not for the narrow versions with a 5% short side (F and G).
 - **On raw return, only the long-only strategy (E) clearly beat it.** It took full market risk
   to do so, and its lead is smaller once dividends and our choice of companies are accounted
   for (Section 5).
@@ -35,7 +38,9 @@ holdout.
 matched the S&P 500's return with two-thirds of its volatility and about half its worst loss. Its
 alpha is significant, and it uses the 20% cut-offs fixed in advance in Phase 4: only the money
 split changed. **A** remains the cleanest scientific test, and **E** gives the most return for
-those willing to carry full market risk.
+those willing to carry full market risk. **F** and **G** show that narrowing too far backfires:
+with only about 9 stocks on the short side (and 9 or 18 on the long side), risk rises and the
+edge is lost in individual stocks' noise.
 
 **Is it a good finding?** Yes, for a study of this size. The effect appears in every variant,
 disappears without language, beats a general-purpose sentiment tool (VADER), and survives
@@ -91,7 +96,7 @@ fraction of each side traded that day.
 
 ---
 
-## 2. The Five Approaches
+## 2. The Seven Approaches
 
 | | Long side | Short side | Money per 100 | Net market exposure | Positions (avg.) |
 |---|---|---|---|---|---|
@@ -100,10 +105,12 @@ fraction of each side traded that day.
 | **C** Tilted 2:1, narrow short | top 20% | bottom 10% | 100 long / 50 short | ≈ 50% (beta 0.56) | 36 / 18 |
 | **D** Tilted 2:1, narrow both | top 15% | bottom 15% | 100 long / 50 short | ≈ 50% (beta 0.57) | 27 / 27 |
 | **E** Long-only | top 15% | none | 100 long | 100% (beta 1.04) | 27 / 0 |
+| **F** Tilted 2:1, very narrow | top 5% | bottom 5% | 100 long / 50 short | ≈ 60% (beta 0.59) | 9 / 9 |
+| **G** Tilted 2:1, narrow short | top 10% | bottom 5% | 100 long / 50 short | ≈ 60% (beta 0.58) | 18 / 9 |
 
 - **A** was fixed in advance from the Phase 4 results and is the **main scientific result**.
 - **B** changes only the money split.
-- **C, D and E** also change the cut-offs, which were picked after seeing earlier results. They
+- **C, D, E, F and G** also change the cut-offs, which were picked after seeing earlier results. They
   are therefore **exploratory**.
 
 Each approach was also run with the **no-language score** and **Velu's VADER score** under
@@ -111,7 +118,7 @@ identical rules. The long-only approach was also compared with **buying every ca
 timing, no score), which is the fair benchmark for what the score adds.
 
 Scripts: [`backtest_finbert.py`](../backtest_finbert.py) (A),
-[`backtest_finbert_2to1.py`](../backtest_finbert_2to1.py) (B, C, D),
+[`backtest_finbert_2to1.py`](../backtest_finbert_2to1.py) (B, C, D, F, G),
 [`backtest_finbert_longonly.py`](../backtest_finbert_longonly.py) (E).
 
 ---
@@ -129,14 +136,20 @@ Scripts: [`backtest_finbert.py`](../backtest_finbert.py) (A),
 | C Tilted 20/10 | +13.4% | 13.8% | 0.97 | −21.0% | 0.56 | +6.2% (0.027) | 250 |
 | D Tilted 15/15 | +13.3% | 14.2% | 0.93 | −20.2% | 0.57 | +6.0% (0.045) | 246 |
 | E Long-only 15% | +18.1% | 22.5% | 0.81 | −37.5% | 1.04 | +4.9% (0.101) | 315 |
+| F Tilted 5/5 | +13.1% | 17.2% | 0.76 | −27.8% | 0.59 | +5.9% (0.175) | 234 |
+| G Tilted 10/5 | +13.3% | 15.7% | 0.84 | −22.6% | 0.58 | +5.9% (0.129) | 242 |
 | Buy every call | +13.6% | 20.2% | 0.67 | −38.9% | 0.96 | +1.0% (0.62) | 235 |
 | S&P 500 | +12.8% | 20.2% | 0.63 | −33.9% | 1.00 | — | 220 |
 
 ![Risk vs return](fig_strategy_risk_return.png)
 
 Figure 2 shows the trade-off. Every FinBERT approach sits above the S&P 500's Sharpe line.
-A, B, C and D take less risk than the market, while E takes slightly more. The three tilted
-strategies cluster together, so the exact cut-off hardly matters.
+A, B, C and D take less risk than the market, while E takes slightly more. The tilted strategies
+at 10–20% cut-offs cluster together, so within that range the exact cut-off hardly matters.
+**F** (5%) earns the same return as B–D with about 25% more volatility. Holding only about 9
+stocks per side adds risk without adding return. **G** (10% long, 5% short) sits in between:
+the same return again, with volatility of about 16%. F's series ends on 8 May 2025, a few days
+earlier than the others, because its last qualifying call came earlier.
 
 ### 3.2 Validation 2012–2017 and all years 2012–2025
 
@@ -147,6 +160,8 @@ strategies cluster together, so the exact cut-off hardly matters.
 | C Tilted 20/10 | +12.4% | 1.36 | −10.5% | +13.0% | 1.08 | −21.0% |
 | D Tilted 15/15 | +10.6% | 1.10 | −12.9% | +12.1% | 0.97 | −20.2% |
 | E Long-only 15% | +19.1% | 1.31 | −17.2% | +18.6% | 0.95 | −37.5% |
+| F Tilted 5/5 | +14.8% | 1.13 | −15.7% | +13.8% | 0.89 | −27.8% |
+| G Tilted 10/5 | +11.4% | 1.06 | −12.6% | +12.5% | 0.90 | −22.6% |
 | Buy every call | +17.7% | 1.42 | −13.4% | +15.4% | 0.89 | −38.9% |
 | S&P 500 | +12.3% | 1.01 | −14.2% | +12.6% | 0.73 | −33.9% |
 
@@ -164,10 +179,19 @@ holdout years.
 | C: alpha (p) | +6.2% (0.027) | +0.4% (0.90) | +5.0% (0.13) |
 | D: alpha (p) | +6.0% (0.045) | +0.7% (0.81) | +3.4% (0.37) |
 | E: return above "buy every call" (p) | **+4.8% (0.044)** | +1.9% (0.46) | +2.1% (0.53) |
+| F: alpha (p) | +5.9% (0.175) | +9.0% (0.071) | +9.8% (0.10) |
+| G: alpha (p) | +5.9% (0.13) | +3.2% (0.42) | +6.7% (0.14) |
 
-In every approach the no-language score earns no alpha. FinBERT beats VADER every time, and
-only FinBERT's results are significant. **The edge comes from reading the language, and from
-reading it with a finance-specific model.**
+In approaches A–E the no-language score earns no alpha, FinBERT beats VADER every time, and only
+FinBERT's results are significant. **The edge comes from reading the language, and from reading
+it with a finance-specific model.**
+
+**F and G are the exceptions, and instructive ones.** With only about 9 stocks on the short
+side, none of the three scores is significant. In F the no-language and VADER versions even come
+out ahead; in G FinBERT beats the no-language score but not VADER.
+Selecting from the extreme 5% leaves too few positions for averaging to work: a handful of
+stocks' unrelated news decides the result. This is not evidence against the language signal. It
+shows that a weak signal needs many positions to show up reliably.
 
 ### 3.4 Robustness
 
@@ -178,8 +202,10 @@ reading it with a finance-specific model.**
 | C Tilted 20/10 | +11.1% (0.93) | +10.5% |
 | D Tilted 15/15 | +11.1% (0.91) | +10.4% |
 | E Long-only 15% | +16.1% (0.88) | +16.3% |
+| F Tilted 5/5 | +9.8% (0.64) | +10.3% |
+| G Tilted 10/5 | +11.3% (0.83) | +10.5% |
 
-The tilted and long-only strategies lose little without 2020. The market-neutral strategy
+The tilted (10–20% cut-offs) and long-only strategies lose little without 2020. The market-neutral strategy
 depends on 2020 the most. Costs three times our assumption leave every approach profitable; the
 market-neutral strategy's break-even cost is 46 bps per trade.
 
@@ -199,6 +225,13 @@ There is no single answer, because the approaches serve different goals.
 0.95, alpha 6.2% vs 5.6%) is far smaller than the uncertainty in either estimate. C's 10% cut-off
 was also found by trying alternatives. When options perform alike, the one chosen in advance is
 the more trustworthy (Harvey, Liu & Zhu, 2016).
+
+**Why not narrower (F).** Picking only the top and bottom 5% does not raise the return (+13.1%)
+but raises volatility from about 14% to 17% and the worst fall from about −20% to −28%. Its alpha
+is no longer significant. The signal is weak for any single call, so it pays to spread it over
+many stocks: about 18–36 per side worked best here, and 9 was too few. **G** confirms it: keeping
+18 longs but cutting the short side to 9 stocks already lowers the Sharpe to 0.84 and makes the
+alpha insignificant (p = 0.13).
 
 **Why the tilt works.** In both periods the long side earned more than the short side gained.
 In the holdout, longs beat the market by 1.41% per trade and shorts by 0.70%; in 2012–2017 the
@@ -228,13 +261,14 @@ Two corrections make the raw comparison less flattering:
 
 **2. Better return per unit of risk?**
 - **Yes, for every approach:** Sharpe 0.74 to 0.97 against 0.63 for the S&P 500.
-- **The worst falls were smaller** for A–D (−14% to −21%, against −34%).
+- **The worst falls were smaller** for A–D, F and G (−14% to −28%, against −34%).
 - **The size of the improvement is uncertain:** with 7.4 years of data, each Sharpe estimate has
   a standard error of about 0.4 (Lo, 2002).
 
 **3. Return beyond market exposure (alpha)?**
 - **Yes: +4.9% to +6.2% a year.**
-- **Significant at 5% for B, C and D.** A is borderline here (p = 0.076), but its own return is
+- **Significant at 5% for B, C and D.** F (5%/5%) and G (10%/5%) have a similar alpha (+5.9%)
+  but it is not significant (p = 0.18 and 0.13), because 9 shorted stocks are too few. A is borderline here (p = 0.076), but its own return is
   significant in the main backtest (p = 0.032). E is not significant (p = 0.10), because its
   market risk adds noise.
 
@@ -252,7 +286,7 @@ genuine stock-picking edge of about 5% a year over our universe.
 
 1. **Out of sample.** Scores come from yearly walk-forward models; trading cut-offs use only past
    calls; the holdout was not used to design the main strategy.
-2. **Consistent.** All five approaches, built in different ways from the same signal, earn
+2. **Consistent.** All seven approaches, built in different ways from the same signal, earn
    similar alpha (about 5–6%). The result does not hinge on one lucky setting.
 3. **Specific to language.** The no-language score earns nothing under every rule.
 4. **Measurement matters.** FinBERT beats VADER in every approach, which supports the project's
@@ -266,8 +300,10 @@ genuine stock-picking edge of about 5% a year over our universe.
 
 1. **Moderate statistics.** t-statistics are about 2.0–2.2. Harvey, Liu and Zhu (2016) argue
    that new return predictors should clear t ≈ 3 because so many are tried.
-2. **Several variants tried.** B was a sizing change; C, D and E were explored after seeing
-   results. Their similarity is reassuring, but the best-looking one is mildly optimistic.
+2. **Several variants tried.** B was a sizing change; C, D, E, F and G were explored after seeing
+   results. Their similarity is reassuring, but the best-looking one is mildly optimistic. F and
+   G also show that with very few positions the language-specific edge cannot be told apart from
+   noise.
 3. **Short sample.** 7.4 holdout years. The 2012–2017 period is weaker, and the market-neutral
    result leans on 2020.
 4. **Survivorship and dividends.** Today's large companies, and a price-only index benchmark.
@@ -318,11 +354,11 @@ solved, and the answer is none.
 | **Price formation** | Informed trading moves prices gradually (Kyle, 1985); attention-limited investors absorb soft information slowly (Hirshleifer & Teoh, 2003). This explains the **drift** in Phase 4 |
 | **Information rent** | If processing information is costly, those who do it earn a return (Grossman & Stiglitz, 1980). Our **alpha of about 5–6% a year** is that rent for reading calls at scale with FinBERT |
 
-### 7.3 The five strategies as receiver strategies
+### 7.3 The seven strategies as receiver strategies
 
 A receiver who holds a belief μ about the firm's type, and pays trading costs, should act only
 when the belief is strong enough to cover those costs. **The best response is a threshold
-rule**: buy when μ is high, sell when it is low, do nothing in between. All five approaches are
+rule**: buy when μ is high, sell when it is low, do nothing in between. All seven approaches are
 threshold strategies of this kind. They differ in the thresholds and in how much risk the
 receiver accepts.
 
@@ -333,6 +369,8 @@ receiver accepts.
 | **C** | Act on Good beliefs at the top 20%, but on Bad beliefs only at the most extreme 10% | **Higher evidence threshold for negative messages:** act on bad news only when the signal is strongest |
 | **D** | Narrower thresholds on both sides (15%) | **Act only on the most confident posteriors.** Fewer, stronger signals: the no-trade zone widens to 70% |
 | **E** | Act only on Good beliefs, never sell short | **One-sided receiver:** uses positive messages only, and bears the market's common risk |
+| **F** | Act only on the most extreme 5% of beliefs on each side | **Over-selective receiver:** a stricter threshold should mean more confident beliefs, but with only a few positions, each firm's unrelated news dominates. With a noisy signal, the best response trades breadth for confidence |
+| **G** | Act on the top 10% of Good beliefs, but only the most extreme 5% of Bad beliefs | **Asymmetric thresholds:** a stricter bar for negative messages, like C, but so strict that the short side becomes too thin to average out noise |
 
 Two caveats keep this reading honest:
 - **The thresholds were chosen, not solved for.** The 20% cut-offs come from Phase 4; the others
@@ -355,8 +393,8 @@ Two caveats keep this reading honest:
 ## 8. Recommendations
 
 1. **Report A as the main result**, because it was fixed in advance and is the cleanest test of
-   under-reaction. Present **B as the recommended practical strategy**, and C, D and E as
-   robustness checks.
+   under-reaction. Present **B as the recommended practical strategy**, and C, D, E, F and G as
+   robustness checks. F and G show the limit: cut-offs much below 10% leave too few stocks.
 2. **Use the game-theoretic framing for interpretation** (Section 7.4), not as a claim about
    methods.
 3. **Next steps that would strengthen the result:**
@@ -434,5 +472,7 @@ Verrecchia, R. E. (1983). Discretionary disclosure. *Journal of Accounting and E
 | C | `python backtest_finbert_2to1.py --short-pct 0.10` | `docxxs/Phase5_finbert_2to1_l20s10_results.md` |
 | D | `python backtest_finbert_2to1.py --long-pct 0.15 --short-pct 0.15` | `docxxs/Phase5_finbert_2to1_l15s15_results.md` |
 | E | `python backtest_finbert_longonly.py` | `docxxs/Phase5_finbert_longonly_l15_results.md` |
+| F | `python backtest_finbert_2to1.py --long-pct 0.05 --short-pct 0.05` | `docxxs/Phase5_finbert_2to1_l5s5_results.md` |
+| G | `python backtest_finbert_2to1.py --long-pct 0.10 --short-pct 0.05` | `docxxs/Phase5_finbert_2to1_l10s5_results.md` |
 | Figures | `python docxxs/make_strategy_figures.py` | `docxxs/fig_strategy_*.png` |
 | PDF | `python docxxs/make_paper_pdf.py Strategy_Report.md` | `docxxs/Strategy_Report.pdf` |

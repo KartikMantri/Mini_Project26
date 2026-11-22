@@ -20,9 +20,23 @@ connective narrative across phases, including decisions still being debated.
 | 3 — Type Classifier | ✅ Re-run on FinBERT (`train_classifier_finbert.py`): reaction AUC 0.611 on the 2018–2025 holdout (VADER 0.588) |
 | 4 — Market-Reaction Test | ✅ Done on the FinBERT score (`market_reaction_finbert.py`): holdout drift +1.62% top vs bottom (p 0.002), +1.31% with controls (p 0.013) |
 | 5 — Trading Backtest | ✅ Done (`backtest_finbert.py`): long-short +6.9%/year after costs, Sharpe 0.74, p 0.032, on the 2018–2025 holdout |
-| 6 — Dashboard & Report | 🔄 Script ready (`dashboard.py`), still reads the old VADER outputs |
+| 6 — Dashboard & Report | ✅ Dashboard rebuilt on the FinBERT results (`streamlit run dashboard.py`); strategy report done; research paper kept local |
 
-**Immediate next step:** Phase 6, switch the dashboard to the FinBERT outputs and write the report. The VADER pipeline is kept only as a comparison baseline.
+**Immediate next step:** final review: check references, update the research paper with the strategy variants, prepare the presentation. The VADER pipeline is kept only as a comparison baseline.
+
+**2026-11-22 — Phase 6 dashboard (Kartik):**
+- `dashboard.py` rewritten. It reads only committed files (FinBERT features, predictions,
+  Phase 4 outputs, prices, Phase 5 daily returns and trades), so it runs right after a pull; the
+  old version read VADER files and the superseded `backtest.py` outputs.
+- Seven pages: Overview (headline numbers, growth of 100), Call explorer (any call's score,
+  percentile vs the past year, language profile, price path vs S&P 500, Strategy A trade),
+  Language (GOOD vs BAD distribution and Welch test per feature, correlation heatmap),
+  Classifier (AUC by year and by model, score deciles), Market reaction (quintiles, CAR paths,
+  quarterly gaps, fixed-effects regressions, any period), Strategies (A–G, no-language, VADER,
+  buy every call, S&P 500: growth, drawdown, risk vs return, scorecard with alpha, year by year),
+  Method.
+- Headline numbers are recomputed from the data files, not typed in. Dark theme in
+  `.streamlit/config.toml`. All pages tested with Streamlit's AppTest.
 
 **2026-11-12 — PARA price fix, Phases 3–4 re-run, Phase 5 done (Kartik):**
 - **PARA prices are not Paramount's.** The series in `data/prices.csv` starts 2021-02-12 at

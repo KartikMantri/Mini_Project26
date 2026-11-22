@@ -27,7 +27,7 @@ that signal — or misses it (a tradeable inefficiency).
 | 3 | Type Classifier (Good/Bad) | ✅ Complete | FinBERT walk-forward model, reaction AUC 0.61 on 2018–2025 (VADER: 0.59) → [`docxxs/Phase3_finbert_results.md`](docxxs/Phase3_finbert_results.md) |
 | 4 | Market-Reaction Test | ✅ Done (FinBERT) | Holdout drift top − bottom +1.62% (p 0.002), +1.31% with controls (p 0.013) → [`docxxs/Phase4_finbert_results.md`](docxxs/Phase4_finbert_results.md) |
 | 5 | Trading Backtest | ✅ Done (FinBERT) | Long-short +6.9%/year after costs, Sharpe 0.74 (p 0.03), 2018–2025 → [`docxxs/Phase5_finbert_results.md`](docxxs/Phase5_finbert_results.md) |
-| 6 | Dashboard & Report | 🔄 Script ready | Interactive Streamlit analytics UI (`dashboard.py`), not yet switched to FinBERT |
+| 6 | Dashboard & Report | ✅ Dashboard done | Streamlit dashboard on the FinBERT results: `streamlit run dashboard.py` (needs only committed files) |
 
 Full documentation for each phase lives in [`docxxs/`](docxxs/).
 **New to the project? Start with the one-page visual guide:**
@@ -53,11 +53,11 @@ python train_classifier.py   # ~30 s; uses the committed data/text_scores.csv
 Every prediction is out-of-sample: each year is scored by a model trained only on earlier years.
 Rebuilding the text scores (`--rebuild-text`) needs local `data/master.csv`.
 
-Phase 4 (`market_reaction.py`) and the dashboard (`dashboard.py`) also read `data/master.csv`, which is not in Git — generate it locally using the steps below before running them.
+The old VADER Phase 4 (`market_reaction.py`) also reads `data/master.csv`, which is not in Git — generate it locally using the steps below before running it. The dashboard (`streamlit run dashboard.py`) needs only committed files.
 
 ### Why Raw Transcript Files Are Excluded From Git
 Raw transcripts and intermediate files exceed GitHub's strict 100 MB per-file limit:
-- `data/master.csv` (~582 MB) — needed locally for Phase 4 and the dashboard
+- `data/master.csv` (~582 MB) — needed locally only for the old VADER Phase 4
 - `data/raw_transcripts.csv` (~741 MB) — intermediate; no later phase reads it, safe to delete
 - `data/labeled_all.csv` (~709 MB) — intermediate; no later phase reads it, safe to delete
 
@@ -100,7 +100,7 @@ Notes for step 1:
 ├── market_reaction.py                  # Phase 4: Market-reaction statistical tests
 ├── backtest_finbert.py                 # Phase 5 (v2): long-short backtest on the FinBERT score, costs, Sharpe
 ├── backtest.py                         # Phase 5 (old): superseded, compounds overlapping trades
-├── dashboard.py                        # Phase 6: Streamlit interactive dashboard
+├── dashboard.py                        # Phase 6: Streamlit dashboard on the FinBERT results (7 pages)
 │
 ├── data/
 │   ├── features_expanded.csv           # 10,493 rows x 35 columns (Phase 2 output, committed)
