@@ -31,7 +31,7 @@ STRATS = {
     "neutral":   ("A  Market-neutral 1:1, 20/20 (main)", "#1baf7a", "-"),
     "ours_2020": ("B  Tilted 2:1, 20/20", "#6250d6", "-"),
     "ours_2010": ("C  Tilted 2:1, 20/10", "#e87ba4", "-"),
-    "ours":      ("D  Tilted 2:1, 15/15", "#2a78d6", "-"),
+    "ours":      ("D  Tilted 2:1, 15/15 (our choice)", "#2a78d6", "-"),
     "longonly":  ("E  Long-only, top 15%", "#eda100", "-"),
     "f_5_5":     ("F  Tilted 2:1, 5/5", "#e34948", "-"),
     "g_10_5":    ("G  Tilted 2:1, 10/5", "#008300", "-"),

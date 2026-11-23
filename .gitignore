@@ -43,3 +43,6 @@ docxxs/make_paper_pdf.py
 docxxs/make_paper_figures.py
 docxxs/fig_quintiles.png
 docxxs/fig_car_paths.png
+
+# Explainer video output (large; regenerate with python journey/make_video.py)
+journey/video/

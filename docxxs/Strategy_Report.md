@@ -16,9 +16,9 @@ holdout.
 | | Approach | Annual return | Sharpe | Worst fall | Alpha / year (p) |
 |---|---|---|---|---|---|
 | A | Market-neutral 1:1, top 20% / bottom 20% (main, pre-set) | +6.9% | 0.74 | −14.1% | +5.7% (0.076) |
-| **B** | **Tilted 2:1, top 20% / bottom 20%** | **+12.9%** | **0.95** | **−19.3%** | **+5.6% (0.034)** |
+| B | Tilted 2:1, top 20% / bottom 20% | +12.9% | 0.95 | −19.3% | +5.6% (0.034) |
 | C | Tilted 2:1, top 20% / bottom 10% | +13.4% | 0.97 | −21.0% | +6.2% (0.027) |
-| D | Tilted 2:1, top 15% / bottom 15% | +13.3% | 0.93 | −20.2% | +6.0% (0.045) |
+| **D** | **Tilted 2:1, top 15% / bottom 15% (our choice)** | **+13.3%** | **0.93** | **−20.2%** | **+6.0% (0.045)** |
 | E | Long-only, top 15% | +18.1% | 0.81 | −37.5% | +4.9% (0.101) |
 | F | Tilted 2:1, top 5% / bottom 5% | +13.1% | 0.76 | −27.8% | +5.9% (0.175) |
 | G | Tilted 2:1, top 10% / bottom 5% | +13.3% | 0.84 | −22.6% | +5.9% (0.129) |
@@ -34,11 +34,16 @@ holdout.
   to do so, and its lead is smaller once dividends and our choice of companies are accounted
   for (Section 5).
 
-**Best approach.** We recommend **B (tilted 2:1, 20%/20%)** as the best practical strategy. It
-matched the S&P 500's return with two-thirds of its volatility and about half its worst loss. Its
-alpha is significant, and it uses the 20% cut-offs fixed in advance in Phase 4: only the money
-split changed. **A** remains the cleanest scientific test, and **E** gives the most return for
-those willing to carry full market risk. **F** and **G** show that narrowing too far backfires:
+**Best approach.** We choose **D (tilted 2:1, top 15% / bottom 15%)** as our strategy. It
+earned +13.3% a year after costs, slightly more than the S&P 500's +12.8%, with about 30% less
+volatility (14.2% vs 20.2%) and a worst fall about 40% smaller (−20.2% vs −33.9%). Its alpha of
++6.0% a year is significant (p = 0.045), and ₹100 grew to ₹246 against ₹220 for the index. It uses
+one cut-off on both sides and trades only the stronger signals, while still holding about 27
+stocks per side. Its 15% cut-off was picked after seeing earlier results, so its numbers are
+mildly optimistic. **B**, which keeps the 20% cut-offs fixed in advance, gives almost the same
+result (+12.9%, Sharpe 0.95) and is the check that D does not rest on a lucky cut-off (Section 4).
+**A** remains the cleanest scientific test, and **E** gives the most return for those willing to
+carry full market risk. **F** and **G** show that narrowing too far backfires:
 with only about 9 stocks on the short side (and 9 or 18 on the long side), risk rises and the
 edge is lost in individual stocks' noise.
 
@@ -218,13 +223,24 @@ There is no single answer, because the approaches serve different goals.
 | Goal | Best | Why |
 |---|---|---|
 | Prove the market under-reacts (science) | **A** | Fixed in advance; removes market moves, so its profit can only come from the signal |
-| Best return for the risk taken (practical) | **B** (C, D equivalent) | Sharpe 0.95, significant alpha, worst fall about half the market's, pre-set cut-offs |
+| Best return for the risk taken (practical): **our choice** | **D** (B, C equivalent) | +13.3% a year, Sharpe 0.93, significant alpha (+6.0%, p 0.045), worst fall about 40% smaller than the market's, balanced 15% cut-offs |
 | Highest return, accepting market risk | **E** | +18.1% a year, but falls with the market (−37.5% in 2020) |
 
-**Why B and not C**, even though C's numbers are slightly higher: the difference (Sharpe 0.97 vs
-0.95, alpha 6.2% vs 5.6%) is far smaller than the uncertainty in either estimate. C's 10% cut-off
-was also found by trying alternatives. When options perform alike, the one chosen in advance is
-the more trustworthy (Harvey, Liu & Zhu, 2016).
+**Why D.** B, C and D perform almost identically (+12.9% to +13.4% a year, Sharpe 0.93–0.97,
+significant alpha). We choose D because:
+- **Balanced and selective.** One cut-off on both sides (15%) is a simple rule. It trades only the
+  stronger signals, yet about 27 stocks per side keep it diversified. C, by contrast, shorts only
+  about 18 stocks.
+- **Significant alpha with a higher return than B:** +6.0% a year (p = 0.045) and +13.3% against
+  +12.9%.
+- **Not too narrow.** F and G, with about 9 shorted stocks, show where narrowing stops working.
+
+**The honest caveat.** D's 15% cut-off was found by trying alternatives after the Phase 4
+results, and its validation-period Sharpe (1.10) was lower than B's (1.30). When options perform
+alike, the one chosen in advance is the more trustworthy (Harvey, Liu & Zhu, 2016). So D's
+holdout numbers are mildly optimistic. B, the version with the pre-set 20% cut-offs, is
+reported alongside it. B's nearly equal result (Sharpe 0.95 vs 0.93) shows that D's performance
+does not depend on the exact cut-off.
 
 **Why not narrower (F).** Picking only the top and bottom 5% does not raise the return (+13.1%)
 but raises volatility from about 14% to 17% and the worst fall from about −20% to −28%. Its alpha
@@ -393,8 +409,9 @@ Two caveats keep this reading honest:
 ## 8. Recommendations
 
 1. **Report A as the main result**, because it was fixed in advance and is the cleanest test of
-   under-reaction. Present **B as the recommended practical strategy**, and C, D, E, F and G as
-   robustness checks. F and G show the limit: cut-offs much below 10% leave too few stocks.
+   under-reaction. Present **D as our chosen practical strategy**, with B (same split, pre-set
+   20% cut-offs) as the check that the choice of cut-off does not drive the result, and C, E, F
+   and G as robustness checks. F and G show the limit: cut-offs much below 10% leave too few stocks.
 2. **Use the game-theoretic framing for interpretation** (Section 7.4), not as a claim about
    methods.
 3. **Next steps that would strengthen the result:**

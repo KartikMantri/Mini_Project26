@@ -24,6 +24,20 @@ connective narrative across phases, including decisions still being debated.
 
 **Immediate next step:** final review: check references, update the research paper with the strategy variants, prepare the presentation. The VADER pipeline is kept only as a comparison baseline.
 
+**2026-11-23 — Chosen strategy switched to D; presentation, journey page and video (Kartik):**
+- **Decision:** the project now presents **Strategy D** (tilted 2:1, top 15% long / bottom 15%
+  short) as its chosen strategy, replacing B. Holdout after costs: +13.3%/yr, Sharpe 0.93,
+  worst fall −20.2%, alpha +6.0%/yr (p 0.045), ₹100 → ₹246 (S&P 500: +12.8%, 0.63, −33.9%, ₹220).
+- **Why D:** one cut-off on both sides; trades only stronger signals but keeps ~27 stocks per side;
+  significant alpha with a slightly higher return than B.
+- **Caveat, stated wherever D is presented:** the 15% cut-off was picked after the Phase 4 results
+  (validation Sharpe 1.10 vs B's 1.30), so D's numbers are mildly optimistic. B, with the pre-set
+  20% cut-offs, gives almost the same result and is reported as the check. A stays the main
+  scientific result.
+- Updated: `dashboard.py` (headline strategy, overview chart), `docxxs/Strategy_Report.md`/`.pdf`
+  and its figures, `docxxs/Phase6_Dashboard_and_Report.md`, the journey page, the video script,
+  and the new `presentation/` deck.
+
 **2026-11-22 — Phase 6 dashboard (Kartik):**
 - `dashboard.py` rewritten. It reads only committed files (FinBERT features, predictions,
   Phase 4 outputs, prices, Phase 5 daily returns and trades), so it runs right after a pull; the

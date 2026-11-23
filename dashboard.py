@@ -165,9 +165,9 @@ def load_prices():
 
 STRATS = {   # key: (label, colour, dash, file, column)
     "A": ("A · Market-neutral 1:1, 20/20", UP, "solid", "backtest_finbert_daily.csv", "ours_net"),
-    "B": ("B · Tilted 2:1, 20/20", BLUE, "solid", "backtest_finbert_2to1_l15s15_daily.csv", "ours_2020"),
+    "B": ("B · Tilted 2:1, 20/20", "#4dd0e1", "solid", "backtest_finbert_2to1_l15s15_daily.csv", "ours_2020"),
     "C": ("C · Tilted 2:1, 20/10", "#b18cff", "solid", "backtest_finbert_2to1_l15s15_daily.csv", "ours_2010"),
-    "D": ("D · Tilted 2:1, 15/15", "#4dd0e1", "solid", "backtest_finbert_2to1_l15s15_daily.csv", "ours"),
+    "D": ("D · Tilted 2:1, 15/15 (our choice)", BLUE, "solid", "backtest_finbert_2to1_l15s15_daily.csv", "ours"),
     "E": ("E · Long-only, top 15%", AMBER, "solid", "backtest_finbert_2to1_l15s15_daily.csv", "longonly"),
     "F": ("F · Tilted 2:1, 5/5", "#ff8fab", "solid", "backtest_finbert_2to1_l5s5_daily.csv", "ours"),
     "G": ("G · Tilted 2:1, 10/5", "#a3e635", "solid", "backtest_finbert_2to1_l10s5_daily.csv", "ours"),
@@ -217,12 +217,12 @@ def headline():
     mrh = in_years(MR, HOLDOUT, "call_date")
     g = spread_by_quarter(mrh, "drift_ar")
     gm, gt, gp, _ = newey_west(g.values, 1)
-    sb = strat_stats(in_years(SR["B"], HOLDOUT), in_years(SR["SPX"], HOLDOUT))
+    sd = strat_stats(in_years(SR["D"], HOLDOUT), in_years(SR["SPX"], HOLDOUT))
     sa = strat_stats(in_years(SR["A"], HOLDOUT), in_years(SR["SPX"], HOLDOUT))
-    return r_auc, gm, gp, (g > 0).mean(), sa, sb
+    return r_auc, gm, gp, (g > 0).mean(), sa, sd
 
 
-R_AUC, GAP, GAP_P, GAP_POS, SA, SB = headline()
+R_AUC, GAP, GAP_P, GAP_POS, SA, SD = headline()
 
 
 # ── sidebar ──────────────────────────────────────────────────────────────────
@@ -241,9 +241,9 @@ with st.sidebar:
 st.markdown(
     f'<div class="tape"><span class="track">'
     f'REACTION AUC <b>{R_AUC:.3f}</b> <i>▲</i> &nbsp;·&nbsp; DRIFT Q5−Q1 <b>{pct(GAP, 2)}</b> '
-    f'<i>p {GAP_P:.3f}</i> &nbsp;·&nbsp; STRATEGY B <b>{pct(SB["Annual return"])}/yr</b> '
-    f'SHARPE <b>{SB["Sharpe"]:.2f}</b> &nbsp;·&nbsp; ALPHA <b>{pct(SB["Alpha / yr"])}/yr</b> '
-    f'<i>p {SB["Alpha p"]:.3f}</i> &nbsp;·&nbsp; MARKET-NEUTRAL A SHARPE <b>{SA["Sharpe"]:.2f}</b> '
+    f'<i>p {GAP_P:.3f}</i> &nbsp;·&nbsp; STRATEGY D <b>{pct(SD["Annual return"])}/yr</b> '
+    f'SHARPE <b>{SD["Sharpe"]:.2f}</b> &nbsp;·&nbsp; ALPHA <b>{pct(SD["Alpha / yr"])}/yr</b> '
+    f'<i>p {SD["Alpha p"]:.3f}</i> &nbsp;·&nbsp; MARKET-NEUTRAL A SHARPE <b>{SA["Sharpe"]:.2f}</b> '
     f'&nbsp;·&nbsp; S&P 500 MAX DD <b>−33.9%</b> &nbsp;·&nbsp; FINBERT · WALK-FORWARD · NO LOOK-AHEAD'
     f'</span></div>', unsafe_allow_html=True)
 
@@ -257,10 +257,10 @@ if page == "Overview":
     kpi(c[0], "Reaction AUC · holdout", f"{R_AUC:.3f}", "VADER version 0.588", True)
     kpi(c[1], "Drift Q5 − Q1 · days +2→+60", pct(GAP, 2),
         f"p {GAP_P:.3f} · {GAP_POS:.0%} of quarters > 0", True)
-    kpi(c[2], "Strategy B · after costs", f"{pct(SB['Annual return'])}/yr",
-        f"Sharpe {SB['Sharpe']:.2f} vs S&P 0.63", True)
-    kpi(c[3], "Alpha beyond market risk", f"{pct(SB['Alpha / yr'])}/yr",
-        f"p {SB['Alpha p']:.3f} · beta {SB['Beta']:.2f}", True)
+    kpi(c[2], "Strategy D · after costs", f"{pct(SD['Annual return'])}/yr",
+        f"Sharpe {SD['Sharpe']:.2f} vs S&P 0.63", True)
+    kpi(c[3], "Alpha beyond market risk", f"{pct(SD['Alpha / yr'])}/yr",
+        f"p {SD['Alpha p']:.3f} · beta {SD['Beta']:.2f}", True)
 
     st.markdown("#### Pipeline")
     st.markdown("""<div class="pipe">
@@ -276,7 +276,7 @@ if page == "Overview":
     with left:
         st.markdown("#### Growth of 100 · holdout")
         fig = go.Figure()
-        for k in ("A", "B", "E", "SPX"):
+        for k in ("A", "D", "E", "SPX"):
             if k in SR:
                 r = in_years(SR[k], HOLDOUT).dropna()
                 lab, colr, dash, *_ = STRATS[k]
@@ -292,8 +292,8 @@ if page == "Overview":
   **{pct(GAP, 2)}** over the next ~3 months, about 29% of the total move.
 - **It survives controls** for the reaction itself, momentum and volatility (+1.31%, p 0.013).
 - **It can be traded.** Market-neutral: {pct(SA['Annual return'])}/yr, Sharpe {SA['Sharpe']:.2f}.
-  Tilted 2:1: {pct(SB['Annual return'])}/yr, Sharpe {SB['Sharpe']:.2f}, worst fall
-  {pct(SB['Max drawdown'])} vs −33.9% for the S&P 500.
+  Strategy D (tilted 2:1, top/bottom 15%, our choice): {pct(SD['Annual return'])}/yr, Sharpe {SD['Sharpe']:.2f}, worst fall
+  {pct(SD['Max drawdown'])} vs −33.9% for the S&P 500.
 - **Caveats:** moderate statistics (t ≈ 2), survivorship bias, 2020 helps, 2012–17 weaker.
 """)
 
@@ -537,10 +537,10 @@ elif page == "Market reaction":
 elif page == "Strategies":
     header("Phase 5", "Trading it · after costs, no look-ahead",
            "Signal from the past year's scores only. Enter day +2, exit day +60. 10 bps per trade, "
-           "0.5%/yr short borrow. A is the pre-set main test; C–G are exploratory.")
+           "0.5%/yr short borrow. A is the pre-set main test; D is our chosen strategy; C–G are exploratory.")
     avail = [k for k in STRATS if k in SR]
     c1, c2 = st.columns([3, 1.2])
-    pick = c1.multiselect("Strategies", avail, default=[k for k in ("A", "B", "E", "SPX") if k in avail],
+    pick = c1.multiselect("Strategies", avail, default=[k for k in ("A", "B", "D", "E", "SPX") if k in avail],
                           format_func=lambda k: STRATS[k][0])
     per = c2.segmented_control("Period", list(PERIODS), default="Holdout 2018–25", required=True)
     yrs = PERIODS[per]

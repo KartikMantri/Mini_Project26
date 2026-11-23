@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Decoding the Game · Project Journey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070b12; --bg2:#0d1420; --bg3:#121b2a; --line:#1d2a3d; --line2:#2a3b55;
+  --text:#d7dee8; --mute:#8a97aa; --dim:#5b6a80;
+  --up:#3ddc97; --down:#ff5d73; --blue:#4da3ff; --amber:#ffb547; --violet:#b18cff;
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"Cascadia Code",Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 var(--sans);overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(77,163,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(77,163,255,.045) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(ellipse at 50% 30%,#000 30%,transparent 85%)}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(900px 500px at 85% 10%,rgba(61,220,151,.07),transparent 60%),radial-gradient(800px 600px at 10% 90%,rgba(77,163,255,.07),transparent 60%)}
+a{color:var(--blue)}
+.mono{font-family:var(--mono)}
+.up{color:var(--up)} .down{color:var(--down)} .amber{color:var(--amber)} .mute{color:var(--mute)}
+
+/* ticker tape */
+.tape{position:fixed;top:0;left:0;right:0;z-index:30;height:calc(30px + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);
+  background:rgba(7,11,18,.92);border-bottom:1px solid var(--line);overflow:hidden;backdrop-filter:blur(6px)}
+.tape-track{display:flex;gap:42px;white-space:nowrap;animation:tape 60s linear infinite;font:12px/30px var(--mono);color:var(--mute);width:max-content}
+.tape-track b{color:var(--text);font-weight:600}
+@keyframes tape{to{transform:translateX(-50%)}}
+
+/* HUD: phase dots */
+.hud{position:fixed;right:18px;top:50%;transform:translateY(-50%);z-index:25;display:flex;flex-direction:column;gap:10px}
+.hud button{all:unset;cursor:pointer;width:11px;height:11px;border-radius:50%;border:1.5px solid var(--line2);background:var(--bg);position:relative;transition:.25s}
+.hud button.on{background:var(--up);border-color:var(--up);box-shadow:0 0 10px var(--up)}
+.hud button.cur{transform:scale(1.35)}
+.hud button span{position:absolute;right:20px;top:50%;transform:translateY(-50%);font:11px var(--mono);color:var(--mute);white-space:nowrap;opacity:0;transition:.2s;pointer-events:none}
+.hud button:hover span,.hud button:focus-visible span{opacity:1}
+
+main{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 24px}
+
+/* hero */
+.hero{min-height:92vh;display:flex;flex-direction:column;justify-content:center;padding-top:70px}
+.eyebrow{font:12px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--up)}
+.hero h1{font-size:clamp(40px,7vw,84px);line-height:1.02;margin:.25em 0 .2em;font-weight:800;letter-spacing:-.03em}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--up),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.lead{font-size:clamp(16px,2vw,20px);color:var(--mute);max-width:760px;margin:0 0 28px}
+.pipeline{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font:13px var(--mono);color:var(--mute);margin-bottom:34px}
+.pipeline span{border:1px solid var(--line2);border-radius:6px;padding:4px 10px;background:rgba(13,20,32,.7)}
+.pipeline i{font-style:normal;color:var(--dim)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;max-width:900px}
+.kpi{border:1px solid var(--line);background:linear-gradient(180deg,rgba(18,27,42,.9),rgba(13,20,32,.75));border-radius:12px;padding:14px 16px}
+.kpi .v{font:600 26px var(--mono);letter-spacing:-.02em}
+.kpi .l{font-size:12.5px;color:var(--mute)}
+.team{margin-top:30px;font-size:13px;color:var(--dim)}
+.scrollcue{margin-top:42px;font:12px var(--mono);color:var(--mute);display:flex;align-items:center;gap:10px}
+.scrollcue::before{content:"";width:1px;height:38px;background:linear-gradient(var(--up),transparent);animation:cue 1.8s ease-in-out infinite}
+@keyframes cue{0%,100%{transform:scaleY(.4);transform-origin:top}50%{transform:scaleY(1)}}
+
+/* road */
+.road{position:relative;margin:40px 0 0}
+.road svg.track{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.track .base{fill:none;stroke:var(--line);stroke-width:10;stroke-linecap:round}
+.track .dash{fill:none;stroke:var(--line2);stroke-width:1.5;stroke-dasharray:2 10}
+.track .lit{fill:none;stroke:url(#litGrad);stroke-width:4;stroke-linecap:round;filter:drop-shadow(0 0 6px rgba(61,220,151,.7))}
+.traveler{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:var(--up);box-shadow:0 0 0 6px rgba(61,220,151,.15),0 0 24px var(--up);z-index:3;pointer-events:none}
+.node{position:absolute;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;z-index:4;cursor:pointer;
+  display:grid;place-items:center;font:700 18px var(--mono);color:var(--mute);background:var(--bg2);border:2px solid var(--line2);transition:.35s}
+.node::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:1px dashed var(--line2);transition:.35s}
+.node:hover,.node:focus-visible{transform:scale(1.08);outline:none}
+.node.on{color:#04140c;background:var(--up);border-color:var(--up);box-shadow:0 0 28px rgba(61,220,151,.55)}
+.node.on::after{border-color:rgba(61,220,151,.5);animation:spin 14s linear infinite}
+.node.final{width:76px;height:76px;margin:-38px 0 0 -38px;font-size:24px}
+.node.final.on{background:var(--amber);border-color:var(--amber);box-shadow:0 0 36px rgba(255,181,71,.6)}
+.node.final.on::after{border-color:rgba(255,181,71,.55)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.card{position:absolute;z-index:4;width:min(470px,calc(100% - 140px));transform:translateY(-50%);
+  border:1px solid var(--line);border-radius:14px;padding:18px 20px;cursor:pointer;
+  background:linear-gradient(180deg,rgba(18,27,42,.92),rgba(10,16,26,.92));backdrop-filter:blur(4px);
+  opacity:.45;transition:opacity .4s,border-color .3s,transform .3s}
+.card.on{opacity:1}
+.card:hover,.card:focus-visible{border-color:var(--up);outline:none}
+.card .ph{font:12px var(--mono);color:var(--up);letter-spacing:.12em;text-transform:uppercase}
+.card h3{margin:4px 0 6px;font-size:21px;letter-spacing:-.01em}
+.card p{margin:0 0 12px;color:var(--mute);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:12px var(--mono);border:1px solid var(--line2);border-radius:999px;padding:2px 10px;color:var(--text);background:rgba(7,11,18,.6)}
+.open{margin-top:12px;font:12.5px var(--mono);color:var(--blue)}
+.card.final{border-color:rgba(255,181,71,.35)} .card.final .ph{color:var(--amber)}
+
+footer{position:relative;z-index:1;text-align:center;color:var(--dim);font-size:13px;padding:80px 24px calc(60px + env(safe-area-inset-bottom,0px))}
+
+/* panel */
+.scrim{position:fixed;inset:0;background:rgba(3,6,10,.55);z-index:40;opacity:0;pointer-events:none;transition:.3s}
+.scrim.show{opacity:1;pointer-events:auto}
+.panel{position:fixed;top:0;right:0;bottom:0;z-index:50;width:min(760px,100vw);background:var(--bg2);border-left:1px solid var(--line2);
+  transform:translateX(102%);transition:transform .38s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:-30px 0 60px rgba(0,0,0,.4)}
+.panel.show{transform:none}
+.p-head{padding:22px 26px 0;border-bottom:1px solid var(--line)}
+.p-top{display:flex;align-items:flex-start;gap:14px}
+.p-top .badge{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--up);color:#04140c;font:700 17px var(--mono)}
+.p-top .badge.final{background:var(--amber)}
+.p-top h2{margin:0;font-size:23px;line-height:1.2}
+.p-top .sub{color:var(--mute);font-size:13.5px;margin-top:3px}
+.p-top .x{margin-left:auto;all:unset;cursor:pointer;margin-left:auto;font:20px var(--mono);color:var(--mute);padding:2px 8px;border-radius:6px}
+.p-top .x:hover{color:var(--text);background:var(--bg3)}
+.tabs{display:flex;gap:2px;margin-top:18px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{all:unset;cursor:pointer;padding:10px 14px;font:13px var(--mono);color:var(--mute);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected=true]{color:var(--text);border-bottom-color:var(--up)}
+.tabs button:hover{color:var(--text)}
+.p-body{flex:1;overflow-y:auto;padding:22px 26px 30px}
+.p-foot{display:flex;justify-content:space-between;gap:10px;padding:12px 26px;border-top:1px solid var(--line)}
+.p-foot button{all:unset;cursor:pointer;font:13px var(--mono);color:var(--mute);padding:6px 10px;border:1px solid var(--line2);border-radius:8px}
+.p-foot button:hover{color:var(--text);border-color:var(--up)}
+.p-foot button:disabled{opacity:.3;cursor:default}
+
+/* panel content */
+.p-body h4{margin:22px 0 8px;font-size:15px;color:var(--text)}
+.p-body h4:first-child{margin-top:0}
+.p-body p,.p-body li{color:#c3ccd8}
+.p-body ul,.p-body ol{padding-left:20px;margin:6px 0 12px}
+.p-body li{margin:4px 0}
+.p-body strong{color:var(--text)}
+.p-body code{font:12.5px var(--mono);background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 5px;color:#e6edf5}
+.box{border:1px solid var(--line);background:var(--bg3);border-radius:10px;padding:12px 14px;margin:12px 0}
+.box.note{border-left:3px solid var(--amber)}
+.box.good{border-left:3px solid var(--up)}
+.box.why{border-left:3px solid var(--blue)}
+.formula{font:13.5px/1.7 var(--mono);background:#091019;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0;overflow-x:auto;white-space:pre;color:#e6edf5}
+.tbl{overflow-x:auto;margin:10px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font:600 11.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}
+td.n,th.n{text-align:right;font-family:var(--mono)}
+tr.hl td{background:rgba(61,220,151,.07)}
+tr.mkt td{color:var(--mute)}
+.steps{counter-reset:s;list-style:none;padding:0}
+.steps li{counter-increment:s;position:relative;padding:2px 0 10px 40px;margin:0}
+.steps li::before{content:counter(s);position:absolute;left:0;top:2px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:600 12px var(--mono);background:var(--bg3);border:1px solid var(--line2);color:var(--up)}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font:12.5px var(--mono);margin:10px 0}
+.flow span{border:1px solid var(--line2);border-radius:6px;padding:4px 9px;background:var(--bg3)}
+.flow i{font-style:normal;color:var(--dim)}
+.bars{display:grid;gap:6px;margin:10px 0}
+.bar{display:grid;grid-template-columns:120px 1fr 64px;gap:10px;align-items:center;font:12.5px var(--mono)}
+.bar .t{height:14px;background:var(--bg3);border-radius:3px;position:relative}
+.bar .t i{position:absolute;top:0;bottom:0;border-radius:3px}
+.bar .zero{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--line2)}
+dl.gloss{margin:0}
+dl.gloss dt{font:600 13.5px var(--mono);color:var(--up);margin-top:14px}
+dl.gloss dd{margin:3px 0 0;color:#c3ccd8}
+.gsearch{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--line2);background:var(--bg3);color:var(--text);font:13px var(--mono);margin-bottom:6px}
+
+/* chart */
+.chart-wrap{position:relative;margin:8px 0}
+.chart-wrap svg{width:100%;height:auto;display:block}
+.toggles{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
+.toggles button{all:unset;cursor:pointer;font:12px var(--mono);padding:3px 10px;border-radius:999px;border:1px solid var(--line2);color:var(--dim)}
+.toggles button.on{color:var(--text)}
+.toggles button i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+.tip{position:absolute;pointer-events:none;background:rgba(7,11,18,.95);border:1px solid var(--line2);border-radius:8px;padding:8px 10px;font:12px/1.55 var(--mono);min-width:150px;display:none;z-index:2}
+
+@media (max-width:760px){
+  main{padding:0 16px}
+  .hud{display:none}
+  .card{width:calc(100% - 76px)!important;left:64px!important;right:auto!important}
+  .node{width:46px;height:46px;margin:-23px 0 0 -23px;font-size:15px}
+  .node.final{width:56px;height:56px;margin:-28px 0 0 -28px}
+  .p-head,.p-body,.p-foot{padding-left:16px;padding-right:16px}
+  .bar{grid-template-columns:92px 1fr 56px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<div class="tape" aria-hidden="true"><div class="tape-track" id="tape"></div></div>
+<nav class="hud" id="hud" aria-label="Jump to phase"></nav>
+
+<main>
+  <section class="hero">
+    <div class="eyebrow">LNMIIT · Mini Project · Semester 5</div>
+    <h1>Decoding<br>the <em>Game</em></h1>
+    <p class="lead">Can a machine read the <strong>language</strong> of an earnings call, tell whether the company is
+      secretly doing well or badly, and catch the stock market being <strong>slow</strong> to notice?
+      Scroll down the path. Every checkpoint is one phase of the project. Click a checkpoint to open it.</p>
+    <div class="pipeline">
+      <span>transcript</span><i>→</i><span>language features</span><i>→</i><span>classifier score</span><i>→</i><span>market-reaction test</span><i>→</i><span>backtest</span><i>→</i><span>dashboard</span>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="v">12,789</div><div class="l">earnings calls · 198 S&amp;P 500 stocks · 2005–2025</div></div>
+      <div class="kpi"><div class="v">0.611</div><div class="l">classifier AUC on unseen years 2018–25</div></div>
+      <div class="kpi"><div class="v up">+1.62%</div><div class="l">slow-reaction gap, top vs bottom calls (p 0.002)</div></div>
+      <div class="kpi"><div class="v up">+13.3%/yr</div><div class="l">Strategy D after costs · Sharpe 0.93 vs S&amp;P 0.63</div></div>
+    </div>
+    <div class="team">Kartik Mantri (24UCS246) · Velu Kala (24DCS012) · Supervisor: Asst. Prof. Girish Sharma</div>
+    <div class="scrollcue">scroll to start the journey</div>
+  </section>
+
+  <section class="road" id="road" aria-label="Project phases">
+    <svg class="track" id="track" aria-hidden="true">
+      <defs><linearGradient id="litGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#4da3ff"/><stop offset=".7" stop-color="#3ddc97"/><stop offset="1" stop-color="#ffb547"/></linearGradient></defs>
+      <path class="base" id="pBase"/><path class="dash" id="pDash"/><path class="lit" id="pLit"/>
+    </svg>
+    <div class="traveler" id="traveler"></div>
+  </section>
+</main>
+
+<footer>Decoding the Game · Kartik Mantri &amp; Velu Kala · LNMIIT<br>
+All numbers come from the project's committed result files. Rebuild the chart data with <span class="mono">python journey/build_data.py</span>.</footer>
+
+<div class="scrim" id="scrim"></div>
+<aside class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="pTitle" aria-hidden="true">
+  <div class="p-head">
+    <div class="p-top">
+      <div class="badge" id="pBadge">0</div>
+      <div><h2 id="pTitle"></h2><div class="sub" id="pSub"></div></div>
+      <button class="x" id="pClose" aria-label="Close">✕</button>
+    </div>
+    <div class="tabs" id="pTabs" role="tablist"></div>
+  </div>
+  <div class="p-body" id="pBody" role="tabpanel"></div>
+  <div class="p-foot"><button id="pPrev">← previous phase</button><button id="pNext">next phase →</button></div>
+</aside>
+
+<script src="data.js"></script>
+<script>
+/* ============================================================
+   CONTENT · one object per checkpoint
+   ============================================================ */
+const PHASES = [
+{
+  num:"0", title:"Setup & Foundation", tag:"The question, the game, and the stocks we study",
+  chips:["200 tickers","research question","success metrics"],
+  tabs:[
+  ["Input",`
+    <h4>What we started with</h4>
+    <ul>
+      <li><strong>An idea from game theory:</strong> a company's managers know whether the business is really doing well or badly (their <em>type</em>). Investors don't. Each quarter, managers <em>talk</em> on the earnings call. Does that talk leak the truth?</li>
+      <li><strong>A list of stocks:</strong> 200 large S&amp;P 500 companies across all sectors, saved in <code>tickers.csv</code> (ticker, sector).</li>
+      <li><strong>Tools:</strong> Python, pandas, scikit-learn, Hugging Face, yfinance. The full list is in <code>requirements.txt</code>.</li>
+    </ul>`],
+  ["Procedure",`
+    <h4>What we did</h4>
+    <ol class="steps">
+      <li><strong>Wrote the research question.</strong> (1) Can language features predict whether a stock does well after a call? (2) If they can, does the market use that information straight away, or does it react slowly (<em>under-react</em>)? (3) If it reacts slowly, can a trading strategy make money from it after costs?</li>
+      <li><strong>Picked the universe.</strong> 200 big, liquid S&amp;P 500 stocks, so prices are reliable and trading costs are low.</li>
+      <li><strong>Set up the repository:</strong> one script per phase, a <code>data/</code> folder, a <code>docxxs/</code> folder with one document per phase, and <code>PROGRESS.md</code> as a decision log.</li>
+      <li><strong>Fixed the rules before looking at results.</strong> No look-ahead (a feature may use only the call's own text or the company's <em>earlier</em> calls), and 2018–2025 kept as an untouched final test period.</li>
+      <li><strong>Defined success as three numbers:</strong> a classifier that beats a coin flip (AUC &gt; 0.5), a significant slow-reaction (drift) gap, and a positive backtest after costs.</li>
+    </ol>`],
+  ["Example",`
+    <h4>One row of the universe</h4>
+    <div class="formula">ticker, sector
+AAPL,   Information Technology
+SBUX,   Consumer Discretionary
+JPM,    Financials</div>
+    <p>Starbucks (<code>SBUX</code>) is in the list. We follow it through every phase on this page, using its call of <strong>30 January 2024</strong>.</p>`],
+  ["Output",`
+    <ul>
+      <li><code>tickers.csv</code>: the 200-stock universe.</li>
+      <li><code>requirements.txt</code>, folder structure, phase documents.</li>
+      <li>A written plan: Phases 1 → 6, each with a clear input and output.</li>
+    </ul>
+    <div class="box why"><strong>Why it matters:</strong> fixing the rules (no look-ahead, untouched holdout) before running anything is what makes the later results believable.</div>`]
+  ]
+},
+{
+  num:"1", title:"Data Collection", tag:"Transcripts + prices → returns → GOOD / BAD labels",
+  chips:["12,789 calls","198 tickers","2005–2025","abnormal return"],
+  tabs:[
+  ["Input",`
+    <ul>
+      <li><strong>Earnings-call transcripts</strong> from the Hugging Face dataset <code>kurry/sp500_earnings_transcripts</code>: the full text of each call, with speaker names.</li>
+      <li><strong>Daily stock prices</strong> (adjusted close) from <code>yfinance</code> for every ticker, plus the S&amp;P 500 index <code>^GSPC</code> as the market.</li>
+      <li>The 200 tickers from Phase 0.</li>
+    </ul>`],
+  ["Procedure",`
+    <ol class="steps">
+      <li><strong>Download and filter</strong> transcripts to our tickers and dates (Oct 2005 → May 2025).</li>
+      <li><strong>Set day 0</strong> to the call's calendar date. Count all windows in <em>trading</em> days from there.</li>
+      <li><strong>Compute the abnormal return</strong> for three windows. "Abnormal" means the stock's return <em>minus</em> the S&amp;P 500's return over the same days, so a stock that only rose because the whole market rose gets no credit.</li>
+    </ol>
+    <div class="formula">abnormal return = stock return − S&amp;P 500 return   (same days)
+
+pre-call   window: day −61 → −1    (how the stock did before the call)
+immediate  window: day  −1 → +1    (the market's first reaction)
+drift      window: day  +2 → +60   (the next ~3 months)</div>
+    <ol class="steps" start="4">
+      <li><strong>Label each call</strong>: <code>GOOD</code> if the drift abnormal return is above 0, else <code>BAD</code>. This is the "true type" the language should reveal.</li>
+      <li><strong>Quality checks.</strong> Every ticker's prices were scanned. Paramount (<code>PARA</code>) had broken prices (series starting near 83,000, almost no link to the market), so its 77 calls were taken out of all return-based tests.</li>
+    </ol>
+    <div class="box note">The first version used a ±2% threshold and dropped "NEUTRAL" calls (10,493 calls kept). The final version keeps every call (12,789), because a real strategy can't know in advance which calls will turn out neutral. The two labelings agree on 97.7% of calls.</div>`],
+  ["Example",`
+    <h4>Starbucks, 30 Jan 2024</h4>
+    <div class="tbl"><table>
+      <tr><th>Window</th><th>Days</th><th class="n">Abnormal return</th><th>Meaning</th></tr>
+      <tr><td>Pre-call</td><td>−61 → −1</td><td class="n down">−15.3%</td><td>SBUX lagged the market by 15.3% in the 3 months <em>before</em> the call</td></tr>
+      <tr><td>Drift</td><td>+2 → +60</td><td class="n down">−8.3%</td><td>it lagged the market by another 8.3% in the 3 months <em>after</em></td></tr>
+    </table></div>
+    <p>The drift is below 0, so this call is labelled <strong class="down">BAD</strong>.</p>
+    <div class="formula">If SBUX returned −2.0% and the S&amp;P returned +6.3% over the same days,
+abnormal = −2.0% − 6.3% = −8.3%   →  BAD</div>
+    <p class="mute">(The −2.0% / +6.3% split only shows how the formula works. The −8.3% is the real number.)</p>`],
+  ["Output",`
+    <ul>
+      <li><code>data/calls_all.csv</code>: <strong>12,789 calls</strong>, 198 tickers, with <code>pre_ar</code>, <code>imm_ar</code>, <code>drift_ar</code> and <code>label</code>.</li>
+      <li><code>data/prices.csv</code>: daily prices for all tickers and the S&amp;P 500 (committed, ~18 MB).</li>
+      <li>Large raw files (<code>master.csv</code>, ~582 MB) stay on the local machine only. GitHub's limit is 100 MB per file.</li>
+    </ul>`]
+  ]
+},
+{
+  num:"2", title:"Signal Extraction", tag:"Turn every call into 18 numbers that describe its language",
+  chips:["FinBERT","18 features","12,716 calls","no look-ahead"],
+  tabs:[
+  ["Input",`
+    <ul>
+      <li>The transcript text of each call from <code>calls_all.csv</code>.</li>
+      <li><strong>FinBERT-tone</strong> (<code>yiyanghkust/finbert-tone</code>): a language model trained on financial text that labels a sentence positive, negative or neutral.</li>
+      <li><strong>FinBERT-FLS</strong>: finds forward-looking statements ("we expect…").</li>
+      <li>The <strong>Loughran–McDonald</strong> finance dictionary (lists of uncertain, negative and modal words).</li>
+    </ul>`],
+  ["Procedure",`
+    <ol class="steps">
+      <li><strong>Split the call into speakers.</strong> A line like <code>Name:</code> starts a new turn. Operator turns are ignored.</li>
+      <li><strong>Separate the two parts of a call.</strong> The <em>prepared remarks</em> (a script read by executives) and the <em>Q&amp;A</em> (live questions), split at the 2nd <code>Operator:</code>.</li>
+      <li><strong>Tell analysts from executives.</strong> After each Operator turn, the first speaker who didn't speak in the prepared remarks is the analyst.</li>
+      <li><strong>Score every sentence with FinBERT.</strong></li>
+    </ol>
+    <div class="formula">net tone of a sentence = P(positive) − P(negative)      range −1 … +1</div>
+    <ol class="steps" start="5">
+      <li><strong>Summarise the call into 18 features</strong> in 5 groups:</li>
+    </ol>
+    <div class="tbl"><table>
+      <tr><th>Group</th><th>Features</th><th>Captures</th></tr>
+      <tr><td>Tone level (3)</td><td><code>prep_net_tone</code>, <code>qa_exec_net_tone</code>, <code>analyst_tone</code></td><td>How positive each part of the call sounds</td></tr>
+      <tr><td>Bad moments (3)</td><td><code>neg_share</code>, <code>tone_p10</code>, <code>tone_std</code></td><td>Share of negative sentences, the worst 10%, how mixed</td></tr>
+      <tr><td>Contrast (2)</td><td><code>tone_gap</code>, <code>delta_tone</code></td><td>Script vs live Q&amp;A; change since the <em>previous</em> call</td></tr>
+      <tr><td>Specificity (2)</td><td><code>specific_fls_share</code>, <code>fls_density</code></td><td>How specific the forward-looking talk is</td></tr>
+      <tr><td>Dictionary &amp; style (8)</td><td>uncertainty, weak/strong modal, negative words, numbers, directness, length, Fog index</td><td>Hedging, precision, readability</td></tr>
+    </table></div>
+    <div class="box why"><strong>No look-ahead:</strong> <code>delta_tone</code> compares only with the same company's <em>earlier</em> call. Nothing uses information from after the call.</div>`],
+  ["Example",`
+    <h4>Scoring sentences</h4>
+    <div class="tbl"><table>
+      <tr><th>Sentence (illustrative)</th><th class="n">P(pos)</th><th class="n">P(neg)</th><th class="n">Net</th></tr>
+      <tr><td>"Revenue grew to a record this quarter."</td><td class="n">0.96</td><td class="n">0.01</td><td class="n up">+0.95</td></tr>
+      <tr><td>"We saw continued softness in traffic."</td><td class="n">0.02</td><td class="n">0.93</td><td class="n down">−0.91</td></tr>
+      <tr><td>"Our next call is in April."</td><td class="n">0.03</td><td class="n">0.02</td><td class="n">+0.01</td></tr>
+    </table></div>
+    <h4>Starbucks, 30 Jan 2024: real feature values</h4>
+    <div class="tbl"><table>
+      <tr><th>Feature</th><th class="n">Value</th><th>Reading</th></tr>
+      <tr><td><code>prep_net_tone</code></td><td class="n up">+0.489</td><td>The script still sounded fairly upbeat</td></tr>
+      <tr><td><code>analyst_tone</code></td><td class="n down">−0.046</td><td>Analysts' questions sounded slightly negative</td></tr>
+      <tr><td><code>delta_tone</code></td><td class="n down">−0.231</td><td>A big drop in tone vs the previous call</td></tr>
+      <tr><td><code>tone_std</code></td><td class="n">0.624</td><td>A mixed call: good and bad sentences</td></tr>
+    </table></div>`],
+  ["Output",`
+    <ul>
+      <li><code>data/features_finbert.csv</code>: <strong>12,716 calls × 22 columns</strong> (18 features plus identity and target columns). 73 stub transcripts under 1,000 words were skipped.</li>
+      <li><code>docxxs/features_finbert.md</code>: a dictionary of every column.</li>
+      <li>Checks: a correlation heatmap (removed duplicate measures) and GOOD-vs-BAD t-tests on pre-2018 calls only.</li>
+    </ul>
+    <div class="box note">This replaced an earlier version built with <strong>VADER</strong>, a general-purpose sentiment tool. VADER files are kept for comparison. FinBERT was better at every later step (AUC 0.611 vs 0.588).</div>`]
+  ]
+},
+{
+  num:"3", title:"Type Classifier", tag:"A model that turns the language into one score per call",
+  chips:["logistic regression","walk-forward","AUC 0.611","score 0 → 1"],
+  tabs:[
+  ["Input",`
+    <div class="tbl"><table>
+      <tr><th>#</th><th>Input</th><th>Meaning</th></tr>
+      <tr><td>1–3</td><td><code>prep_net_tone</code>, <code>qa_exec_net_tone</code>, <code>analyst_tone</code></td><td>Tone of script, executive answers, analyst questions</td></tr>
+      <tr><td>4–6</td><td><code>neg_share</code>, <code>tone_p10</code>, <code>tone_std</code></td><td>Negative share, worst 10%, mixedness</td></tr>
+      <tr><td>7–8</td><td><code>tone_gap</code>, <code>delta_tone</code></td><td>Script vs live; change since last call</td></tr>
+      <tr><td>9</td><td><code>pre_ar</code></td><td>Stock vs S&amp;P in the 3 months before</td></tr>
+      <tr><td>10</td><td><code>pre_vol</code></td><td>How jumpy the stock was before</td></tr>
+    </table></div>
+    <p><strong>Target:</strong> did the stock beat the S&amp;P over the <em>immediate</em> window, day −1 → +1? (yes = 1, no = 0)</p>
+    <div class="box why"><strong>Why train on the immediate reaction, not the 3-month GOOD/BAD?</strong> The 3-day reaction is mostly caused by the call itself. A 3-month return is mostly other news. It also keeps Phase 4 honest: the model never sees the 3-month outcome, so if its score still predicts it, that's real evidence the market was slow.</div>`],
+  ["Procedure",`
+    <ol class="steps">
+      <li><strong>Choose which feature groups to use</strong> by trying groups one at a time on 2012–2017 (validation) and keeping a group only if AUC rises by at least 0.002. Tone and market groups were kept. Forward-looking, dictionary and style features added nothing.</li>
+      <li><strong>Clean the inputs</strong> using the training data only: cap extreme <code>pre_ar</code>/<code>pre_vol</code> at the 1st/99th percentile, fill blanks with the median, turn each input into a z-score.</li>
+      <li><strong>Weighted sum → probability.</strong></li>
+    </ol>
+    <div class="formula">total = b₀ + w₁·z₁ + w₂·z₂ + … + w₁₀·z₁₀
+score = 1 / (1 + e^(−total))          → between 0 and 1</div>
+    <ol class="steps" start="4">
+      <li><strong>Learn the weights automatically</strong> (L-BFGS optimiser, L2 penalty with C = 0.05 to keep weights small and stop the model memorising noise).</li>
+      <li><strong>Walk forward in time.</strong> A new model every year from 2010 to 2025, trained only on earlier calls, with a 7-day embargo so no training call's reaction overlaps the test period.</li>
+    </ol>
+    <div class="formula">model for 2016 → trained on calls up to ~Dec 2015 → scores 2016 calls
+model for 2017 → trained on calls up to ~Dec 2016 → scores 2017 calls
+...                every score is out-of-sample</div>
+    <h4>What the model learned (2024 model)</h4>
+    <div class="bars" id="wbars"></div>
+    <p class="mute">The strongest signals are how the <strong>analysts</strong> sound and how much the tone <strong>changed</strong> since last quarter. <code>neg_share</code> and <code>tone_p10</code> are near mirror images (r = −0.97), so read those two together, not one at a time.</p>`],
+  ["Example",`
+    <h4>Starbucks, 30 Jan 2024 → score</h4>
+    <div class="tbl"><table>
+      <tr><th>Input</th><th class="n">Value</th><th class="n">z-score</th><th class="n">× weight</th><th class="n">= contribution</th></tr>
+      <tr><td><code>delta_tone</code></td><td class="n">−0.231</td><td class="n">−3.04</td><td class="n">+0.247</td><td class="n down">−0.752</td></tr>
+      <tr><td><code>analyst_tone</code></td><td class="n">−0.046</td><td class="n">−0.66</td><td class="n">+0.287</td><td class="n down">−0.189</td></tr>
+      <tr><td><code>prep_net_tone</code></td><td class="n">+0.489</td><td class="n">+0.94</td><td class="n">+0.136</td><td class="n up">+0.128</td></tr>
+      <tr><td><code>pre_ar</code></td><td class="n">−15.3%</td><td class="n">−1.58</td><td class="n">−0.069</td><td class="n up">+0.110</td></tr>
+      <tr><td><code>tone_std</code></td><td class="n">0.624</td><td class="n">+1.00</td><td class="n">−0.085</td><td class="n down">−0.084</td></tr>
+      <tr><td>other 5 inputs</td><td></td><td></td><td></td><td class="n">−0.030</td></tr>
+      <tr><td>intercept</td><td></td><td></td><td></td><td class="n">+0.053</td></tr>
+      <tr><td><strong>Total</strong></td><td></td><td></td><td></td><td class="n"><strong>−0.764</strong></td></tr>
+    </table></div>
+    <div class="formula">score = 1 / (1 + e^0.764) = 0.317</div>
+    <p>One of the lowest scores of that quarter. The main reason is that the tone fell <strong>three standard deviations</strong> compared with the previous call.</p>`],
+  ["Output",`
+    <ul>
+      <li><code>data/predictions_finbert.csv</code>: column <code>score_final</code>, one out-of-sample score per call.</li>
+    </ul>
+    <div class="tbl"><table>
+      <tr><th>Check</th><th class="n">Result</th><th>Meaning</th></tr>
+      <tr class="hl"><td>Reaction AUC, holdout 2018–25</td><td class="n">0.611</td><td>Ranks an up-reacting call above a down-reacting one 61% of the time (50% = coin flip)</td></tr>
+      <tr><td>Reaction AUC, validation 2012–17</td><td class="n">0.640</td><td></td></tr>
+      <tr><td>Same model with VADER features</td><td class="n">0.588</td><td>FinBERT is better</td></tr>
+      <tr><td>XGBoost instead</td><td class="n">0.618</td><td>About the same, so we kept the simpler model</td></tr>
+      <tr><td>Fixed split 2022–25</td><td class="n">0.611</td><td>The result doesn't depend on how the data is split</td></tr>
+      <tr><td>GOOD/BAD (3-month) AUC</td><td class="n">0.537</td><td>Low, as expected: 3 months is mostly other news</td></tr>
+    </table></div>
+    <div class="box note">For stock returns, AUC 0.61 is a real signal. A value above ~0.70 would make us suspect future information leaking in.</div>`]
+  ]
+},
+{
+  num:"4", title:"Market-Reaction Test", tag:"Does the market react fully at once, or slowly?",
+  chips:["quintiles","drift gap +1.62%","p 0.002","22 / 30 quarters"],
+  tabs:[
+  ["Input",`
+    <ul>
+      <li>The Phase 3 score of every call (out-of-sample).</li>
+      <li>Each call's <strong>immediate</strong> (−1 → +1) and <strong>drift</strong> (+2 → +60) abnormal returns from Phase 1.</li>
+      <li>Controls: the immediate reaction, the pre-call return and the pre-call volatility.</li>
+    </ul>
+    <div class="box why"><strong>The idea:</strong> if markets were perfectly efficient, everything the call revealed would be priced in by day +1, and the score would predict <em>nothing</em> after that. If the score still predicts days +2 → +60, the market <strong>under-reacted</strong>.</div>`],
+  ["Procedure",`
+    <ol class="steps">
+      <li><strong>Rank calls inside each calendar quarter</strong> by score and split them into 5 equal groups (quintiles). Q1 = lowest scores, Q5 = highest.</li>
+      <li><strong>Average the returns</strong> of each group, in both windows.</li>
+      <li><strong>Compute the gap</strong> = Q5 average − Q1 average, separately for every quarter.</li>
+      <li><strong>Test whether the gap is really above 0</strong> with a t-test across the 30 holdout quarters, using Newey–West errors (which allow neighbouring quarters to be related).</li>
+      <li><strong>Regression with controls.</strong> Regress drift on the score's rank plus the immediate reaction, pre-call return and volatility, with quarter fixed effects and errors clustered by quarter. This checks the score isn't just repeating something the market already knew.</li>
+      <li><strong>Placebo.</strong> Run the same test on a model with <em>no language</em> (market inputs only).</li>
+    </ol>
+    <div class="formula">drift gap = avg drift(top 20% scores) − avg drift(bottom 20% scores)
+t = mean gap across quarters / Newey–West standard error</div>`],
+  ["Example",`
+    <h4>Following SBUX through Phase 4</h4>
+    <p>In Q1 2024, all calls were ranked by score. SBUX's 0.317 put it in <strong>Q1 (bottom quintile)</strong>. Its drift of <span class="down">−8.3%</span> went into the bottom group's average for that quarter.</p>
+    <p>Do this for every call in every quarter, and the holdout averages look like this:</p>
+    <div id="qbars"></div>
+    <p>Low scores are followed by low drift and high scores by high drift, in a near-staircase pattern. The top − bottom gap is the headline.</p>`],
+  ["Output",`
+    <div class="tbl"><table>
+      <tr><th>Test (holdout 2018–25)</th><th class="n">Result</th><th class="n">p-value</th></tr>
+      <tr><td>Immediate gap (−1 → +1)</td><td class="n up">+3.94%</td><td class="n">t 13.2</td></tr>
+      <tr class="hl"><td><strong>Drift gap (+2 → +60)</strong></td><td class="n up"><strong>+1.62%</strong></td><td class="n">0.002</td></tr>
+      <tr><td>Drift gap with controls</td><td class="n up">+1.31%</td><td class="n">0.013</td></tr>
+      <tr><td>Share of total move that came late</td><td class="n">29%</td><td class="n"></td></tr>
+      <tr><td>Quarters with a positive gap</td><td class="n">22 of 30</td><td class="n"></td></tr>
+      <tr><td>No-language placebo</td><td class="n down">−0.36%</td><td class="n">0.53 (nothing)</td></tr>
+      <tr><td>Validation 2012–17</td><td class="n up">+0.85%</td><td class="n">0.031</td></tr>
+      <tr><td>VADER score, same test</td><td class="n up">+1.40%</td><td class="n">0.059</td></tr>
+    </table></div>
+    <div class="box good"><strong>Conclusion:</strong> the market reacts to the call's language straight away (+3.94%) but not <em>fully</em>. About 29% of the move comes in the following 3 months. The gap survives controls and disappears without language, so it comes from the words themselves.</div>`]
+  ]
+},
+{
+  num:"5", title:"Trading Backtest", tag:"Can the slow reaction be traded, after costs?",
+  chips:["enter day +2","exit day +60","10 bps / trade","Sharpe 0.74"],
+  tabs:[
+  ["Input",`
+    <ul>
+      <li>The out-of-sample score for every call (Phase 3).</li>
+      <li>Daily prices for every stock and the S&amp;P 500 (Phase 1).</li>
+      <li>Cost assumptions: <strong>10 bps</strong> (0.10%) per trade and <strong>0.5%/yr</strong> to borrow stock for a short.</li>
+    </ul>`],
+  ["Procedure",`
+    <ol class="steps">
+      <li><strong>Decide in real time.</strong> When a call happens, compare its score with the scores of the <em>past 365 days</em> (at least 200 past calls). If it is in the top 20% → <strong>buy (long)</strong>. Bottom 20% → <strong>short</strong>. A trader could do exactly this on the day.</li>
+      <li><strong>Enter on day +2</strong> (after the immediate reaction is over) and <strong>exit on day +60</strong>.</li>
+      <li><strong>Build a daily portfolio.</strong> Each day, the long money is split equally across all open long positions, and the same for shorts. If a side is empty, that money sits in the S&amp;P 500.</li>
+      <li><strong>Charge costs</strong> on every buy and sell, and the borrow fee on shorts.</li>
+      <li><strong>Measure the result</strong>: annual return, Sharpe ratio, worst fall (drawdown), beta and alpha against the S&amp;P 500, with Newey–West tests (10 lags).</li>
+    </ol>
+    <div class="formula">Strategy A (market-neutral):  ₹100 long top 20%  +  ₹100 short bottom 20%
+daily return = long-leg return − short-leg return − costs
+Sharpe       = (mean daily return × 252) / (std daily × √252)
+alpha        = return − beta × S&amp;P return          (Jensen's alpha)</div>`],
+  ["Example",`
+    <h4>The SBUX trade</h4>
+    <div class="flow"><span>30 Jan 2024 call</span><i>→</i><span>score 0.317</span><i>→</i><span>bottom 2% of past year</span><i>→</i><span class="down">SHORT</span><i>→</i><span>enter day +2</span><i>→</i><span>exit day +60</span></div>
+    <p>SBUX then lagged the S&amp;P by <strong class="down">8.3%</strong>. A short gains when the stock falls behind, so this position helped the short leg (minus a 0.10% fee on entry, 0.10% on exit, and a little borrow cost).</p>
+    <div class="box note">One trade proves nothing. The strategy only works because of <strong>thousands</strong> of trades like this, where the average is slightly in our favour. Many individual trades lose.</div>`],
+  ["Output",`
+    <div class="tbl"><table>
+      <tr><th>Strategy A, holdout 2018–25, after costs</th><th class="n">Result</th></tr>
+      <tr class="hl"><td>Annual return</td><td class="n up">+6.9%</td></tr>
+      <tr><td>Sharpe ratio</td><td class="n">0.74 (p 0.032)</td></tr>
+      <tr><td>Worst fall (max drawdown)</td><td class="n down">−14.1%</td></tr>
+      <tr><td>Alpha vs S&amp;P 500</td><td class="n">+5.7%/yr (p 0.076)</td></tr>
+      <tr><td>₹100 became</td><td class="n">₹161</td></tr>
+      <tr><td>Break-even cost</td><td class="n">46 bps per trade</td></tr>
+    </table></div>
+    <p>Costs could be 4–5× higher than we assumed and the strategy would still break even. The same backtest with the <strong>no-language</strong> score or the <strong>VADER</strong> score did worse, so the profit comes from FinBERT reading the language.</p>
+    <p>Files: <code>backtest_finbert.py</code> → <code>data/backtest_finbert_daily.csv</code>, <code>backtest_finbert_trades.csv</code>, <code>docxxs/Phase5_finbert_results.md</code>.</p>`]
+  ]
+},
+{
+  num:"6", title:"Dashboard & Report", tag:"Everything in one place, explorable",
+  chips:["Streamlit","7 pages","strategy report"],
+  tabs:[
+  ["Input",`
+    <ul>
+      <li>Only <strong>committed</strong> result files: features, predictions, market-reaction results, price paths, prices, backtest daily and trade files.</li>
+      <li>No raw transcripts needed, so anyone can clone the repo and run it.</li>
+    </ul>`],
+  ["Procedure",`
+    <ol class="steps">
+      <li>Built a <strong>Streamlit</strong> app with Plotly charts in a dark finance theme.</li>
+      <li>Recompute headline numbers from the data files when the app starts, so they can't go stale.</li>
+      <li>Wrote the <strong>Strategy Report</strong> comparing approaches A–G, and a full research paper (kept local).</li>
+    </ol>
+    <div class="tbl"><table>
+      <tr><th>Page</th><th>Shows</th></tr>
+      <tr><td>Overview</td><td>Headline numbers, pipeline, growth of ₹100</td></tr>
+      <tr><td>Call explorer</td><td>Any call: score, percentile, signal, language profile, price path</td></tr>
+      <tr><td>Language</td><td>Each feature: GOOD vs BAD distribution, t-test, correlations</td></tr>
+      <tr><td>Classifier</td><td>AUC by year, model comparison, returns by score decile</td></tr>
+      <tr><td>Market reaction</td><td>Quintiles, return paths, drift gap per quarter, regressions</td></tr>
+      <tr><td>Strategies</td><td>A–G vs S&amp;P: growth, drawdowns, risk-return, alpha, years</td></tr>
+      <tr><td>Method</td><td>Rules and limitations</td></tr>
+    </table></div>`],
+  ["Example",`
+    <h4>Run it</h4>
+    <div class="formula">pip install -r requirements.txt
+streamlit run dashboard.py</div>
+    <p>In <em>Call explorer</em>, pick SBUX → 2024-01-30 to see the score 0.317, its percentile, the SHORT signal, and its price path against the S&amp;P 500.</p>`],
+  ["Output",`
+    <ul>
+      <li><code>dashboard.py</code> plus <code>.streamlit/config.toml</code> (theme).</li>
+      <li><code>docxxs/Strategy_Report.pdf</code>: all strategies, the best one, market comparison, game-theory mapping.</li>
+      <li>This journey page: <code>journey/index.html</code>.</li>
+    </ul>`]
+  ]
+},
+{
+  num:"₹", final:true, title:"Returns & Strategies", tag:"Seven ways to trade the score, and did we beat the market?",
+  chips:["A–G","₹100 → ₹246 (D)","alpha +6.0%/yr","game theory"],
+  tabs:[
+  ["Results",`
+    <h4>All strategies · holdout 2018–2025 · after costs</h4>
+    <div class="tbl"><table>
+      <tr><th>Strategy</th><th class="n">Return/yr</th><th class="n">Sharpe</th><th class="n">Worst fall</th><th class="n">Alpha (p)</th><th class="n">₹100 →</th></tr>
+      <tr><td>A · 1:1, 20/20</td><td class="n">+6.9%</td><td class="n">0.74</td><td class="n">−14.1%</td><td class="n">+5.7% (0.076)</td><td class="n">161</td></tr>
+      <tr><td>B · 2:1, 20/20</td><td class="n">+12.9%</td><td class="n">0.95</td><td class="n">−19.3%</td><td class="n">+5.6% (0.034)</td><td class="n">241</td></tr>
+      <tr><td>C · 2:1, 20/10</td><td class="n">+13.4%</td><td class="n">0.97</td><td class="n">−21.0%</td><td class="n">+6.2% (0.027)</td><td class="n">250</td></tr>
+      <tr class="hl"><td><strong>D · 2:1, 15/15 (our choice)</strong></td><td class="n">+13.3%</td><td class="n">0.93</td><td class="n">−20.2%</td><td class="n">+6.0% (0.045)</td><td class="n">246</td></tr>
+      <tr><td>E · long-only 15%</td><td class="n">+18.1%</td><td class="n">0.81</td><td class="n">−37.5%</td><td class="n">+4.9% (0.10)</td><td class="n">315</td></tr>
+      <tr><td>F · 2:1, 5/5</td><td class="n">+13.1%</td><td class="n">0.76</td><td class="n">−27.8%</td><td class="n">+5.9% (0.18)</td><td class="n">234</td></tr>
+      <tr><td>G · 2:1, 10/5</td><td class="n">+13.3%</td><td class="n">0.84</td><td class="n">−22.6%</td><td class="n">+5.9% (0.13)</td><td class="n">242</td></tr>
+      <tr class="mkt"><td>S&amp;P 500</td><td class="n">+12.8%</td><td class="n">0.63</td><td class="n">−33.9%</td><td class="n">—</td><td class="n">220</td></tr>
+    </table></div>
+    <p class="mute">"20/10" = long the top 20% of scores, short the bottom 10%. "2:1" = ₹100 long for every ₹50 short. Alpha = return not explained by simply holding the market. p below 0.05 = unlikely to be luck.</p>
+    <div class="box good"><strong>Our chosen strategy: D.</strong> Slightly more than the S&amp;P 500's return (+13.3% vs +12.8%), with about 30% less volatility (14.2% vs 20.2%), a much smaller worst fall (−20% vs −34%), a higher Sharpe (0.93 vs 0.63), and a significant alpha (+6.0%/yr, p 0.045). One 15% cut-off on both sides trades only the stronger signals while still holding about 27 stocks per side.<br><br>
+    <strong>Honest caveat:</strong> the 15% cut-off was picked after seeing earlier results, so D's numbers are a little flattered. B, which keeps the pre-set 20% cut-offs, gets almost the same result (+12.9%, Sharpe 0.95), so D doesn't rest on a lucky cut-off.<br><br>
+    <strong>Main scientific result: A.</strong> Being market-neutral, its +6.9% can't come from the market going up. It can only come from the language signal.</div>`],
+  ["Growth chart",`
+    <h4>Growth of ₹100 · Jan 2018 → 2025 · after costs</h4>
+    <div class="toggles" id="tg"></div>
+    <div class="chart-wrap" id="chart"><div class="tip" id="tip"></div></div>
+    <p class="mute">Click the chips to show or hide lines. Hover over the chart to read values. "Buy every call" invests in every call with no score, which shows how much the score itself adds. The chart runs to the last price date, so its S&amp;P end value differs slightly from the table, which stops at the last trade.</p>`],
+  ["What each means",`
+    <div class="tbl"><table>
+      <tr><th></th><th>How the money is placed</th><th>Idea</th></tr>
+      <tr><td><strong>A</strong></td><td>₹100 long top 20% · ₹100 short bottom 20%</td><td>Market-neutral: up and down markets cancel out. A pure test of the signal.</td></tr>
+      <tr><td><strong>B</strong></td><td>₹100 long top 20% · ₹50 short bottom 20%</td><td>Tilted long: keeps some market exposure (stocks rise over time) plus the signal.</td></tr>
+      <tr><td><strong>C</strong></td><td>₹100 long top 20% · ₹50 short bottom 10%</td><td>Shorts only the very worst calls.</td></tr>
+      <tr><td><strong>D</strong></td><td>₹100 long top 15% · ₹50 short bottom 15%</td><td><strong>Our choice.</strong> Pickier on both sides, but still about 27 stocks per side.</td></tr>
+      <tr><td><strong>E</strong></td><td>₹100 long top 15% only (idle money in the S&amp;P)</td><td>No shorting at all: highest return but rides every market crash.</td></tr>
+      <tr><td><strong>F</strong></td><td>₹100 long top 5% · ₹50 short bottom 5%</td><td>Very picky: few stocks, so very noisy.</td></tr>
+      <tr><td><strong>G</strong></td><td>₹100 long top 10% · ₹50 short bottom 5%</td><td>Between D and F.</td></tr>
+    </table></div>
+    <h4>What we learned from the variants</h4>
+    <ul>
+      <li><strong>Tilting 2:1 raises return</strong> (+6.9% → ~+13%) mainly by adding market exposure. The <em>alpha</em> stays about the same (~+6%/yr), so the signal is robust to sizing.</li>
+      <li><strong>Being pickier doesn't help.</strong> At 5/5 or 10/5 there are fewer stocks, so returns get noisier (worst falls of −23% to −28%) and alphas stop being significant.</li>
+      <li><strong>Long-only (E)</strong> has the highest raw return, but its −37.5% worst fall is deeper than the market's. Compared with buying <em>every</em> call, the score still adds +4.8%/yr (p 0.044).</li>
+    </ul>`],
+  ["Beat the market?",`
+    <h4>Short answer: on risk-adjusted terms, yes. On raw return, roughly a tie, except long-only.</h4>
+    <div class="tbl"><table>
+      <tr><th>Question</th><th>Answer</th></tr>
+      <tr><td>Higher return than the S&amp;P?</td><td>B–G ≈ S&amp;P (+13% vs +12.8%). E is higher (+18.1%). A is lower but takes no market risk.</td></tr>
+      <tr><td>Better return per unit of risk?</td><td><strong class="up">Yes.</strong> Every strategy has a higher Sharpe than the S&amp;P (0.74–0.97 vs 0.63).</td></tr>
+      <tr><td>Smaller crashes?</td><td><strong class="up">Yes</strong> for A–D and G (−14% to −23% vs −34%).</td></tr>
+      <tr><td>Return the market can't explain (alpha)?</td><td><strong class="up">Yes</strong>, about +6%/yr, significant for B, C and D (p &lt; 0.05).</td></tr>
+    </table></div>
+    <h4>Is it a good finding?</h4>
+    <ul>
+      <li><strong>Yes, as research:</strong> the signal is out-of-sample, survives costs (break-even 46 bps), survives controls, disappears without language, and beats the VADER version. That matches published work showing markets under-react to soft information.</li>
+      <li><strong>Be honest about the limits:</strong> 8 test years, 198 large US stocks, assumed (not real) costs, no tax, and many strategies tested, so the best one is a little flattered. A Sharpe near 1 is good but not extraordinary. Treat it as evidence, not a money machine.</li>
+    </ul>
+    <div class="box note">Sharpe guide: below 0.5 weak · 0.5–1 decent · above 1 very good · above 2 in a backtest usually means a mistake.</div>`],
+  ["Game theory",`
+    <h4>The project as a signalling game</h4>
+    <div class="flow"><span>Nature picks firm type: good / bad</span><i>→</i><span>Sender: management</span><i>→</i><span>Message: call language</span><i>→</i><span>Receiver: market / us</span><i>→</i><span>Action: buy / short / ignore</span></div>
+    <div class="tbl"><table>
+      <tr><th>Game-theory piece</th><th>In our project</th></tr>
+      <tr><td>Private type</td><td>Whether the business is really good or bad (GOOD/BAD label, seen only later)</td></tr>
+      <tr><td>Signal / cheap talk</td><td>What managers say on the call. Talking is free, so they <em>can</em> spin it.</td></tr>
+      <tr><td>Hard-to-fake signal</td><td>Live Q&amp;A and <strong>analysts'</strong> tone: unscripted, so harder to manage. That's why <code>analyst_tone</code> gets the biggest weight.</td></tr>
+      <tr><td>Bayesian receiver</td><td>The classifier: it updates a belief about the type from the message. The score ≈ P(good | words).</td></tr>
+      <tr><td>Receiver's strategy</td><td>Threshold rules: belief above the top cut → long, below the bottom cut → short (A–G only change the cuts and the sizing).</td></tr>
+      <tr><td>Equilibrium failure</td><td>The drift gap: the real market updates <em>too little</em> at first (limited attention), so a sharper receiver profits.</td></tr>
+    </table></div>
+    <div class="box note">This is a way to <strong>interpret</strong> the results using signalling theory (Spence) and cheap talk (Crawford–Sobel). We did not estimate a formal game-theory model.</div>`],
+  ["Glossary",`
+    <input class="gsearch" id="gq" placeholder="filter terms… (e.g. sharpe, alpha, embargo)" aria-label="Filter glossary">
+    <dl class="gloss" id="gl"></dl>`]
+  ]
+}
+];
+
+const GLOSSARY = [
+ ["Abnormal return","Stock return minus the S&P 500 return over the same days. Removes the part caused by the whole market moving."],
+ ["Day 0 / windows","Day 0 is the call date. Pre −61→−1, immediate −1→+1, drift +2→+60 trading days."],
+ ["GOOD / BAD label","GOOD if the drift abnormal return is above 0, otherwise BAD. The firm's 'true type', seen only afterwards."],
+ ["FinBERT","A BERT language model trained on financial text. Gives each sentence P(positive), P(negative), P(neutral)."],
+ ["Net tone","P(positive) − P(negative) for a sentence, from −1 to +1. Call-level features average these."],
+ ["Prepared remarks / Q&A","The scripted opening of a call vs the live question-and-answer session."],
+ ["Look-ahead bias","Accidentally using information that wasn't available at the time. Avoided everywhere."],
+ ["z-score","How many standard deviations a value is above or below the training average."],
+ ["Logistic regression","A weighted sum of inputs, squashed through the sigmoid 1/(1+e^−x) into a probability between 0 and 1."],
+ ["Regularisation (C)","A penalty that keeps weights small so the model doesn't memorise noise. C = 0.05 is strong."],
+ ["Walk-forward","Retrain every year on past data only, then score the next year. Every score is out-of-sample."],
+ ["Embargo","A gap (7 days) between the last training call and the test period, so outcomes don't overlap."],
+ ["Validation / holdout","2012–17 was used to make choices. 2018–25 (the holdout) was used only once, for the final results."],
+ ["AUC","The chance the model ranks a random positive case above a random negative one. 0.5 = coin flip, 1 = perfect."],
+ ["Quintile","One of 5 equal groups after sorting. Q5 = top 20% of scores, Q1 = bottom 20%."],
+ ["Drift / under-reaction","The price keeps moving in the direction of the news for weeks, because the market didn't react fully at first."],
+ ["Drift gap","Average drift of top-quintile calls minus bottom-quintile calls."],
+ ["t-statistic / p-value","t measures how many standard errors a result is from zero. p is the chance of a result this big if there were really no effect. p < 0.05 is the usual bar."],
+ ["Newey–West","A standard-error correction that allows nearby observations (quarters, days) to be related."],
+ ["Fixed effects","Comparing calls only with others in the same quarter, removing market-wide events in that quarter."],
+ ["Long / short","Long = buy, gains if the price rises. Short = borrow and sell, gains if the price falls."],
+ ["Market-neutral","Equal money long and short, so the market's ups and downs roughly cancel (Strategy A)."],
+ ["2:1 tilt","₹100 long for every ₹50 short. Keeps some market exposure."],
+ ["bps (basis point)","0.01%. 10 bps = 0.10% charged on every buy and sell."],
+ ["Borrow cost","The fee for borrowing stock to short it, assumed 0.5% per year."],
+ ["Break-even cost","The cost per trade at which profit falls to zero. 46 bps for Strategy A."],
+ ["Sharpe ratio","Annual return ÷ annual volatility: return per unit of risk. S&P ≈ 0.63, Strategy D 0.93."],
+ ["Drawdown","The worst fall from a previous peak, e.g. −14.1% for Strategy A."],
+ ["Beta","How much a strategy moves with the market. 1 = like the market, 0 = unrelated."],
+ ["Alpha (Jensen)","Return left after removing beta × market return: the part the market can't explain."],
+ ["Signalling game","A game where an informed player sends a message and an uninformed player infers the type from it."],
+ ["Cheap talk","A signal that costs nothing to send, so it's informative only if lying has some cost or risk."],
+];
+
+/* ============================================================
+   TAPE + HUD
+   ============================================================ */
+const tapeItems = ["AUC <b>0.611</b> <span class='up'>▲</span>","DRIFT GAP <b>+1.62%</b> <span class='up'>▲</span>","IMMEDIATE GAP <b>+3.94%</b>","STRAT A <b>+6.9%/yr</b> SR 0.74","STRAT D <b>+13.3%/yr</b> SR 0.93","S&amp;P 500 <b>+12.8%/yr</b> SR 0.63","ALPHA B <b>+5.6%/yr</b> p 0.034","BREAK-EVEN <b>46 bps</b>","CALLS <b>12,789</b>","HOLDOUT <b>2018–2025</b>","VADER AUC <b>0.588</b> <span class='down'>▼</span>","LONG-ONLY E <b>+18.1%/yr</b> DD −37.5%"];
+document.getElementById("tape").innerHTML = [...tapeItems,...tapeItems].map(s=>`<span>${s}</span>`).join("");
+
+const road = document.getElementById("road");
+const hud = document.getElementById("hud");
+const nodes = [], cards = [], dots = [];
+
+PHASES.forEach((p,i)=>{
+  const n = document.createElement("button");
+  n.className = "node"+(p.final?" final":""); n.textContent = p.num;
+  n.setAttribute("aria-label",`Open ${p.final?"":"Phase "+p.num+": "}${p.title}`);
+  n.onclick = ()=>openPanel(i);
+  const c = document.createElement("div");
+  c.className = "card"+(p.final?" final":""); c.tabIndex = 0; c.setAttribute("role","button");
+  c.innerHTML = `<div class="ph">${p.final?"Finish line":"Phase "+p.num}</div><h3>${p.title}</h3><p>${p.tag}</p>
+    <div class="chips">${p.chips.map(x=>`<span class="chip">${x}</span>`).join("")}</div><div class="open">open details →</div>`;
+  c.onclick = ()=>openPanel(i);
+  c.onkeydown = e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();openPanel(i);} };
+  road.append(n,c); nodes.push(n); cards.push(c);
+  const d = document.createElement("button");
+  d.innerHTML = `<span>${p.final?"":p.num+" · "}${p.title}</span>`;
+  d.setAttribute("aria-label",p.title);
+  d.onclick = ()=>window.scrollTo({top: road.offsetTop + pos[i].y - innerHeight/2, behavior:"smooth"});
+  hud.append(d); dots.push(d);
+});
+
+/* ============================================================
+   PATH LAYOUT
+   ============================================================ */
+let pos = [], pathLen = 0, samples = [];
+const pBase = document.getElementById("pBase"), pDash = document.getElementById("pDash"), pLit = document.getElementById("pLit");
+const traveler = document.getElementById("traveler");
+
+function layout(){
+  const W = road.clientWidth, narrow = W < 720;
+  const gap = narrow ? 380 : 430, top = 80;
+  pos = PHASES.map((p,i)=>({x: narrow ? 26 : (i%2===0 ? W*0.16 : W*0.84), y: top + i*gap}));
+  const H = top + (PHASES.length-1)*gap + 140;
+  road.style.height = H+"px";
+  pos.forEach((q,i)=>{
+    nodes[i].style.left = q.x+"px"; nodes[i].style.top = q.y+"px";
+    const c = cards[i];
+    c.style.top = q.y+"px";
+    if(narrow){ c.style.left = "64px"; c.style.right = "auto"; }
+    else if(i%2===0){ c.style.left = (q.x+62)+"px"; c.style.right = "auto"; }
+    else { c.style.left = "auto"; c.style.right = (W-q.x+62)+"px"; }
+  });
+  let d = `M ${narrow?26:W/2} 0 C ${narrow?26:W/2} ${top*0.6}, ${pos[0].x} ${top*0.4}, ${pos[0].x} ${pos[0].y}`;
+  for(let i=1;i<pos.length;i++){
+    const a=pos[i-1], b=pos[i], k=gap*0.62;
+    d += ` C ${a.x} ${a.y+k}, ${b.x} ${b.y-k}, ${b.x} ${b.y}`;
+  }
+  [pBase,pDash,pLit].forEach(p=>p.setAttribute("d",d));
+  pathLen = pLit.getTotalLength();
+  pLit.style.strokeDasharray = pathLen;
+  samples = [];
+  for(let s=0;s<=pathLen;s+=4){ const pt=pLit.getPointAtLength(s); samples.push([s,pt.x,pt.y]); }
+  onScroll();
+}
+
+function onScroll(){
+  if(!samples.length) return;
+  const rect = road.getBoundingClientRect();
+  const cy = innerHeight*0.55 - rect.top;
+  let lo=0, hi=samples.length-1;
+  while(lo<hi){ const m=(lo+hi)>>1; if(samples[m][2] < cy) lo=m+1; else hi=m; }
+  const sm = samples[Math.max(0,Math.min(lo,samples.length-1))];
+  const len = cy <= 0 ? 0 : sm[0];
+  pLit.style.strokeDashoffset = pathLen - len;
+  traveler.style.left = sm[1]+"px"; traveler.style.top = (cy<=0?0:sm[2])+"px";
+  let cur = -1;
+  pos.forEach((q,i)=>{
+    const on = q.y <= cy + 2;
+    nodes[i].classList.toggle("on",on); cards[i].classList.toggle("on",on || Math.abs(q.y-cy)<260);
+    dots[i].classList.toggle("on",on); if(on) cur=i;
+  });
+  dots.forEach((d,i)=>d.classList.toggle("cur",i===cur));
+}
+addEventListener("scroll",onScroll,{passive:true});
+addEventListener("resize",layout);
+layout();
+if(document.fonts) document.fonts.ready.then(layout);
+
+/* ============================================================
+   PANEL
+   ============================================================ */
+const panel=document.getElementById("panel"), scrim=document.getElementById("scrim");
+const pTabs=document.getElementById("pTabs"), pBody=document.getElementById("pBody");
+let curPhase=-1, lastFocus=null;
+
+function openPanel(i, tab=0){
+  if(curPhase===-1) lastFocus=document.activeElement;
+  curPhase=i; const p=PHASES[i];
+  const b=document.getElementById("pBadge"); b.textContent=p.num; b.className="badge"+(p.final?" final":"");
+  document.getElementById("pTitle").textContent = (p.final?"":"Phase "+p.num+" · ")+p.title;
+  document.getElementById("pSub").textContent = p.tag;
+  pTabs.innerHTML="";
+  p.tabs.forEach(([name],t)=>{
+    const btn=document.createElement("button"); btn.textContent=name; btn.setAttribute("role","tab");
+    btn.onclick=()=>showTab(t); pTabs.append(btn);
+  });
+  document.getElementById("pPrev").disabled = i===0;
+  document.getElementById("pNext").disabled = i===PHASES.length-1;
+  showTab(tab);
+  panel.classList.add("show"); scrim.classList.add("show"); panel.setAttribute("aria-hidden","false");
+  document.getElementById("pClose").focus({preventScroll:true});
+}
+function showTab(t){
+  const p=PHASES[curPhase];
+  [...pTabs.children].forEach((b,k)=>b.setAttribute("aria-selected",k===t));
+  pBody.innerHTML=p.tabs[t][1]; pBody.scrollTop=0;
+  if(document.getElementById("wbars")) drawWeights();
+  if(document.getElementById("qbars")) drawQuintiles();
+  if(document.getElementById("chart")) initChart();
+  if(document.getElementById("gl")) initGlossary();
+}
+function closePanel(){
+  panel.classList.remove("show"); scrim.classList.remove("show"); panel.setAttribute("aria-hidden","true");
+  curPhase=-1; if(lastFocus) lastFocus.focus({preventScroll:true});
+}
+document.getElementById("pClose").onclick=closePanel;
+scrim.onclick=closePanel;
+document.getElementById("pPrev").onclick=()=>curPhase>0&&openPanel(curPhase-1);
+document.getElementById("pNext").onclick=()=>curPhase<PHASES.length-1&&openPanel(curPhase+1);
+addEventListener("keydown",e=>{
+  if(curPhase<0) return;
+  if(e.key==="Escape") closePanel();
+  if(e.target.tagName==="INPUT") return;
+  if(e.key==="ArrowRight"){ const sel=[...pTabs.children].findIndex(b=>b.getAttribute("aria-selected")==="true"); if(sel<pTabs.children.length-1) showTab(sel+1); }
+  if(e.key==="ArrowLeft"){ const sel=[...pTabs.children].findIndex(b=>b.getAttribute("aria-selected")==="true"); if(sel>0) showTab(sel-1); }
+});
+
+/* ---------- small visuals ---------- */
+function drawWeights(){
+  const W=[["analyst_tone",.287],["delta_tone",.247],["prep_net_tone",.136],["neg_share",.127],["pre_vol",.075],["tone_p10",.035],["tone_gap",.035],["qa_exec_net_tone",-.028],["pre_ar",-.069],["tone_std",-.085]];
+  const m=.3;
+  document.getElementById("wbars").innerHTML=W.map(([n,v])=>{
+    const w=Math.abs(v)/m*50, left=v>=0?50:50-w;
+    return `<div class="bar"><span>${n}</span><span class="t"><span class="zero"></span><i style="left:${left}%;width:${w}%;background:${v>=0?"var(--up)":"var(--down)"}"></i></span><span style="text-align:right">${v>0?"+":""}${v.toFixed(3)}</span></div>`;
+  }).join("");
+}
+function drawQuintiles(){
+  const Q=[["Q1 lowest",-1.94,-0.53],["Q2",-0.46,-0.02],["Q3",0.33,0.25],["Q4",1.07,0.24],["Q5 highest",2.00,1.10]];
+  const row=(lab,v,m)=>{const w=Math.abs(v)/m*50,left=v>=0?50:50-w;return `<div class="bar"><span>${lab}</span><span class="t"><span class="zero"></span><i style="left:${left}%;width:${w}%;background:${v>=0?"var(--up)":"var(--down)"}"></i></span><span style="text-align:right">${v>0?"+":""}${v.toFixed(2)}%</span></div>`;};
+  document.getElementById("qbars").innerHTML =
+    `<h4>Immediate (day −1 → +1)</h4><div class="bars">${Q.map(q=>row(q[0],q[1],2.2)).join("")}</div>
+     <h4>Drift (day +2 → +60): the slow part</h4><div class="bars">${Q.map(q=>row(q[0],q[2],1.25)).join("")}</div>
+     <div class="formula">drift gap = +1.10% − (−0.53%) ≈ +1.62%  (computed quarter by quarter)   p = 0.002</div>`;
+}
+
+/* ---------- equity chart (plain SVG) ---------- */
+const SER = {
+  A:["A · 1:1 20/20","#3ddc97",""], B:["B · 2:1 20/20","#4dd0e1",""], C:["C · 2:1 20/10","#b18cff",""],
+  D:["D · 2:1 15/15 (our choice)","#4da3ff",""], E:["E · long-only 15%","#ffb547",""], F:["F · 2:1 5/5","#ff8fab",""],
+  G:["G · 2:1 10/5","#a3e635",""], ALL:["Buy every call","#8a94a6","5 4"], SPX:["S&P 500","#eef3f8","6 4"]
+};
+let active = new Set(["A","D","E","SPX"]);
+function initChart(){
+  const tg=document.getElementById("tg");
+  if(!window.JOURNEY_DATA){ document.getElementById("chart").innerHTML="<p class='mute'>Chart data missing: run <code>python journey/build_data.py</code>.</p>"; return; }
+  tg.innerHTML="";
+  Object.entries(SER).forEach(([k,[lab,col]])=>{
+    const b=document.createElement("button"); b.innerHTML=`<i style="background:${col}"></i>${lab}`;
+    b.className=active.has(k)?"on":""; b.style.borderColor=active.has(k)?col:"";
+    b.onclick=()=>{ active.has(k)?active.delete(k):active.add(k); initChart(); };
+    tg.append(b);
+  });
+  drawChart();
+}
+function drawChart(){
+  const D=window.JOURNEY_DATA, wrap=document.getElementById("chart"), tip=document.getElementById("tip");
+  const W=760,H=360,L=46,R=14,T=14,B=28, n=D.dates.length;
+  const keys=[...active];
+  let lo=Infinity,hi=-Infinity;
+  keys.forEach(k=>D.series[k].forEach(v=>{lo=Math.min(lo,v);hi=Math.max(hi,v);}));
+  if(!keys.length){lo=80;hi=320;}
+  lo=Math.floor(lo/20)*20; hi=Math.ceil(hi/20)*20;
+  const x=i=>L+(W-L-R)*i/(n-1), y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  let g="";
+  const step=(hi-lo)<=120?20:50;
+  for(let v=Math.ceil(lo/step)*step; v<=hi; v+=step){
+    g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="${v===100?"#2a3b55":"#16202f"}" ${v===100?'stroke-dasharray="3 3"':''}/>
+        <text x="${L-8}" y="${y(v)+4}" text-anchor="end" fill="#5b6a80" font-size="11" font-family="JetBrains Mono,monospace">₹${v}</text>`;
+  }
+  let lastY="";
+  D.dates.forEach((d,i)=>{ const yr=d.slice(0,4); if(yr!==lastY){ lastY=yr;
+    g+=`<line x1="${x(i)}" x2="${x(i)}" y1="${T}" y2="${H-B}" stroke="#121b2a"/><text x="${x(i)+3}" y="${H-10}" fill="#5b6a80" font-size="11" font-family="JetBrains Mono,monospace">${yr}</text>`; }});
+  const order=["SPX","ALL","A","F","G","C","B","D","E"].filter(k=>active.has(k));
+  order.forEach(k=>{
+    const [lab,col,dash]=SER[k], s=D.series[k];
+    const pts=s.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    g+=`<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="${k==="SPX"||k==="ALL"?1.4:2}" ${dash?`stroke-dasharray="${dash}"`:""} stroke-linejoin="round"/>`;
+    const lv=s[n-1]; g+=`<circle cx="${x(n-1)}" cy="${y(lv)}" r="3" fill="${col}"/>`;
+  });
+  g+=`<line id="xh" y1="${T}" y2="${H-B}" stroke="#8a97aa" stroke-dasharray="2 3" visibility="hidden"/><rect id="ov" x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="transparent"/>`;
+  [...wrap.querySelectorAll("svg")].forEach(s=>s.remove());
+  wrap.insertAdjacentHTML("afterbegin",`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Growth of 100 rupees by strategy, 2018 to 2025">${g}</svg>`);
+  const svg=wrap.querySelector("svg"), xh=svg.querySelector("#xh"), ov=svg.querySelector("#ov");
+  const move=e=>{
+    const r=svg.getBoundingClientRect(), cx=(e.touches?e.touches[0].clientX:e.clientX);
+    const sx=(cx-r.left)*W/r.width; const i=Math.max(0,Math.min(n-1,Math.round((sx-L)/(W-L-R)*(n-1))));
+    xh.setAttribute("x1",x(i)); xh.setAttribute("x2",x(i)); xh.setAttribute("visibility","visible");
+    const rows=order.slice().sort((a,b)=>D.series[b][i]-D.series[a][i]).map(k=>`<div><span style="color:${SER[k][1]}">●</span> ${SER[k][0]} <b style="float:right;margin-left:12px">₹${D.series[k][i].toFixed(0)}</b></div>`).join("");
+    tip.innerHTML=`<div class="mute">${D.dates[i]}</div>${rows}`; tip.style.display="block";
+    const px=x(i)*r.width/W; const tw=tip.offsetWidth;
+    tip.style.left=(px+tw+16>r.width? px-tw-12 : px+12)+"px"; tip.style.top="10px";
+  };
+  ov.addEventListener("mousemove",move); ov.addEventListener("touchmove",move,{passive:true});
+  ov.addEventListener("mouseleave",()=>{tip.style.display="none";xh.setAttribute("visibility","hidden");});
+}
+
+/* ---------- glossary ---------- */
+function initGlossary(){
+  const gl=document.getElementById("gl"), q=document.getElementById("gq");
+  const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const render=()=>{ const f=q.value.toLowerCase().trim();
+    gl.innerHTML=GLOSSARY.filter(([t,d])=>!f||(t+" "+d).toLowerCase().includes(f)).map(([t,d])=>`<dt>${esc(t)}</dt><dd>${esc(d)}</dd>`).join("") || "<dd class='mute'>No match.</dd>"; };
+  q.oninput=render; render();
+}
+</script>
+</body>
+</html>

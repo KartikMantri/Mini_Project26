@@ -28,5 +28,5 @@ Headline numbers are recomputed from the data files when the app starts. The the
 1. **Classifier AUC:** 0.611 on the 2018–2025 holdout (VADER version 0.588).
 2. **Drift predictability:** top − bottom quintile +1.62% over days +2 → +60 (p 0.002),
    +1.31% with controls.
-3. **Backtest:** market-neutral +6.9%/yr after costs (Sharpe 0.74); tilted 2:1 +12.9%/yr
-   (Sharpe 0.95, alpha +5.6%/yr, p 0.033).
+3. **Backtest:** market-neutral +6.9%/yr after costs (Sharpe 0.74). Our chosen strategy D
+   (tilted 2:1, top/bottom 15%) earned +13.3%/yr (Sharpe 0.93, alpha +6.0%/yr, p 0.045).
