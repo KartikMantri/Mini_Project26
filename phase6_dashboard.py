@@ -17,7 +17,7 @@ Reads (all in data/):
   backtest_finbert_2to1_l15s15_daily.csv (+ _l5s5_, _l10s5_ if present)
 
 Usage:
-    streamlit run dashboard.py
+    streamlit run phase6_dashboard.py
 """
 
 from pathlib import Path
@@ -29,7 +29,7 @@ import streamlit as st
 from scipy import stats
 from sklearn.metrics import roc_auc_score
 
-from market_reaction_finbert import fe_ols, newey_west, spread_by_quarter
+from phase4_market_reaction_test import fe_ols, newey_west, spread_by_quarter
 
 DATA = Path(__file__).parent / "data"
 HOLDOUT, VALID, ALL = (2018, 2025), (2012, 2017), (2012, 2025)
@@ -173,7 +173,6 @@ STRATS = {   # key: (label, colour, dash, file, column)
     "G": ("G · Tilted 2:1, 10/5", "#a3e635", "solid", "backtest_finbert_2to1_l10s5_daily.csv", "ours"),
     "ALL": ("Buy every call (no score)", "#8a94a6", "dot", "backtest_finbert_2to1_l15s15_daily.csv", "all_calls"),
     "NOLANG": ("A with no-language score", "#5b6475", "dot", "backtest_finbert_daily.csv", "nolang_net"),
-    "VADER": ("A with VADER score", "#f472b6", "dot", "backtest_finbert_daily.csv", "velu_net"),
     "SPX": ("S&P 500 (price index)", "#eef3f8", "dash", "backtest_finbert_daily.csv", "sp500"),
 }
 
@@ -254,7 +253,7 @@ if page == "Overview":
            "We read 12,716 earnings calls with FinBERT, score each one out of sample, and test "
            "whether the score predicts returns after the market's first reaction.")
     c = st.columns(4)
-    kpi(c[0], "Reaction AUC · holdout", f"{R_AUC:.3f}", "VADER version 0.588", True)
+    kpi(c[0], "Reaction AUC · holdout", f"{R_AUC:.3f}", "earlier VADER version 0.588", True)
     kpi(c[1], "Drift Q5 − Q1 · days +2→+60", pct(GAP, 2),
         f"p {GAP_P:.3f} · {GAP_POS:.0%} of quarters > 0", True)
     kpi(c[2], "Strategy D · after costs", f"{pct(SD['Annual return'])}/yr",
@@ -448,7 +447,7 @@ elif page == "Classifier":
     c = st.columns(3)
     kpi(c[0], "Reaction AUC · holdout", f"{rows[0][1]:.3f}", "0.5 = coin flip", True)
     kpi(c[1], "GOOD/BAD AUC · holdout", f"{rows[0][2]:.3f}", "3-month drift is mostly noise")
-    kpi(c[2], "Old VADER model", "0.588", "same calls, same method")
+    kpi(c[2], "Earlier VADER model", "0.588", "past result, code in archive/vader")
     left, right = st.columns([1.2, 1])
     with left:
         st.markdown("#### Reaction AUC by year")

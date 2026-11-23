@@ -1,6 +1,6 @@
 """
-Phase 4 (v2) — Market-Reaction Test on the FinBERT Phase 3 score
-==================================================================
+Phase 4 — Market-Reaction Test on the Phase 3 score
+===================================================
 Does the market fully price what an earnings call's language reveals?
 
 The Phase 3 score (data/predictions_finbert.csv, trained only on the immediate reaction and
@@ -9,8 +9,7 @@ always out-of-sample) is compared with
   - the drift window, day +2 -> +60: does the score keep predicting returns afterwards?
 If it predicts the drift, the market under-reacted to the language.
 
-Tests (the standard event-study set, same definitions as Velu's VADER Phase 4 so the two
-can be compared like for like):
+Tests (the standard event-study set):
   1. Quintiles: calls ranked by score within each calendar quarter, mean abnormal return per
      quintile. Top-minus-bottom spread per quarter, t-statistic across quarters with
      Newey-West (1 lag) errors, because consecutive quarters' 60-day windows overlap.
@@ -21,14 +20,12 @@ can be compared like for like):
   4. Year by year, cumulative abnormal-return path, and a (post-hoc) pandemic check.
 Returns are winsorised at 1% / 99%.
 
-Reads:  data/predictions_finbert.csv, data/prices.csv,
-        data/_cache/velu_phase4_predictions.csv (Velu's VADER scores, for comparison;
-        from `git show origin/vadar-phase4:data/predictions.csv`)
+Reads:  data/predictions_finbert.csv, data/prices.csv
 Writes: data/market_reaction_finbert.csv, data/car_paths_finbert.csv,
         docxxs/Phase4_finbert_results.md
 
 Usage:
-    python market_reaction_finbert.py
+    python phase4_market_reaction_test.py
 """
 
 from pathlib import Path
@@ -38,10 +35,9 @@ import pandas as pd
 from scipy import stats
 from sklearn.metrics import roc_auc_score
 
-from event_returns import BAD_PRICE_TICKERS, PRE_WIN, EventReturns, load_prices
+from phase1_abnormal_returns import BAD_PRICE_TICKERS, PRE_WIN, EventReturns, load_prices
 
 OURS_CSV   = Path("data/predictions_finbert.csv")
-VELU_CSV   = Path("data/_cache/velu_phase4_predictions.csv")
 OUT_CSV    = Path("data/market_reaction_finbert.csv")
 PATHS_CSV  = Path("data/car_paths_finbert.csv")
 RESULTS_MD = Path("docxxs/Phase4_finbert_results.md")
@@ -245,22 +241,13 @@ HEAD = ("| Run | Calls | Immediate top − bottom | Drift top − bottom | Drift
 def main():
     er = EventReturns(load_prices())
     ours = load(OURS_CSV, "score_final", "score_nolang", er)
-    velu = load(VELU_CSV, "score_reaction_lr", "score_nolang_lr", er)
-    print(f"[Phase4] ours {len(ours):,} calls, Velu {len(velu):,} calls")
+    print(f"[Phase4] {len(ours):,} calls")
 
     res, ranked = {}, {}
     for per, yrs in PERIODS.items():
         res[per], ranked[per] = analyse(in_period(ours, yrs))
         m, t, p, T = res[per]["drift_spread"]
         print(f"[Phase4] {per:8s} drift top-bottom {pct(m)} (t {t:.2f}, p {p:.3f})")
-
-    # Velu's scores through the same code; and both on the calls they share
-    vres = {per: analyse(in_period(velu, yrs))[0] for per, yrs in PERIODS.items()}
-    keys = ["ticker", "call_date"]
-    common = ours.merge(velu[keys], on=keys)
-    v_common = velu.merge(ours[keys], on=keys)
-    cres = {per: (analyse(in_period(common, yrs))[0], analyse(in_period(v_common, yrs))[0])
-            for per, yrs in (("holdout", PERIODS["holdout"]), ("all", PERIODS["all"]))}
 
     # Year by year, CAR paths, post-hoc pandemic check
     years = by_year(ranked["all"])
@@ -287,7 +274,7 @@ def main():
     share = m_d / (m_i + m_d)
     A = res["all"]
     L = [
-        "# Phase 4 (v2) — Market-Reaction Test on the FinBERT Score",
+        "# Phase 4 — Market-Reaction Test on the FinBERT Score",
         "",
         "Does the market fully price what an earnings call's language reveals? The Phase 3",
         "FinBERT score ([`Phase3_finbert_results.md`](Phase3_finbert_results.md); trained only on the",
@@ -298,8 +285,7 @@ def main():
         "Method: calls are ranked by score within each calendar quarter; returns are abnormal",
         "(stock minus S&P 500) and winsorised at 1% / 99%; spreads are tested across quarters with",
         "Newey-West (1 lag) t-statistics; regressions use quarter fixed effects with errors clustered",
-        "by quarter. These are the same definitions as Velu's VADER Phase 4, so the numbers compare",
-        "directly. Regenerate with `python market_reaction_finbert.py`.",
+        "by quarter. Regenerate with `python phase4_market_reaction_test.py`.",
         "",
         "## Answer (holdout years 2018–2025)",
         "",
@@ -316,35 +302,18 @@ def main():
         f"with controls {pct(A['regs'][2][1]['rank'][0])} "
         f"(t {A['regs'][2][1]['rank'][1]:.1f}, p {A['regs'][2][1]['rank'][2]:.3f}).",
         "",
-        "## FinBERT vs Velu's VADER Phase 4",
+        "## Earlier VADER baseline (past result)",
         "",
-        "Velu's scores are `score_reaction_lr` from his `vadar-phase4` branch (his Phase 3 with",
-        "the extra `text_delta` input), run through **this** script. His own report gave",
-        "holdout drift +1.20% (t 1.8) and +1.15% with controls; small differences below come from",
-        "implementation details.",
-        "",
-        "**Each run on its own calls** (ours includes the old NEUTRAL calls):",
-        "",
-        HEAD,
-        headline_row("FinBERT, holdout 2018–2025", res["holdout"]),
-        headline_row("VADER (Velu), holdout 2018–2025", vres["holdout"]),
-        headline_row("FinBERT, 2012–2025", res["all"]),
-        headline_row("VADER (Velu), 2012–2025", vres["all"]),
-        "",
-        "**Same calls only** (calls in both runs):",
-        "",
-        HEAD,
-        headline_row("FinBERT, holdout 2018–2025", cres["holdout"][0]),
-        headline_row("VADER (Velu), holdout 2018–2025", cres["holdout"][1]),
-        headline_row("FinBERT, 2012–2025", cres["all"][0]),
-        headline_row("VADER (Velu), 2012–2025", cres["all"][1]),
+        "Run through this same test, the earlier VADER-feature score (Velu's pipeline) gave a",
+        "holdout drift gap of +1.40% (p 0.059), against +1.62% (p 0.002) for FinBERT. That code is",
+        "kept in [`archive/vader/`](../archive/vader/) and is no longer part of the pipeline.",
         "",
     ]
     for per in ("holdout", "valid", "all"):
         L += section(per, res[per])
     L += ["## Robustness: holdout without the pandemic period", "",
-          "Same exclusions as Velu's check. **Post-hoc:** these were chosen after seeing that",
-          "2020–2021 were weak years in his run, so they explain the main result; they don't replace it.",
+          "**Post-hoc:** these exclusions were chosen after seeing that 2020–2021 were weak years in",
+          "an earlier run, so they explain the main result; they don't replace it.",
           "", HEAD]
     L += [headline_row(n, r) for n, r in robust]
     L += ["", "## Year by year (2012–2025)", "",

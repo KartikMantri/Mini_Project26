@@ -222,7 +222,7 @@ PHASES = [
                   ("b", "13,334 transcripts → 12,789 with prices → 12,716 usable (73 stubs)."),
                   ("b", "GOOD 6,817 (53%) / BAD 5,972 (47%)."),
                   ("b", "Saved as data/calls_all.csv (710 MB, local only; rebuilt by "
-                        "build_call_dataset.py)."),
+                        "phase1_build_labelled_calls.py)."),
                   ("b", "Paramount (PARA): its price series is some other instrument, so its 77 "
                         "calls get no returns (excluded from training and tests). Fixed 12 Nov.")],
          out="data/calls_all.csv  —  12,789 calls: transcript text + returns (pre, immediate, drift) + GOOD/BAD"),
@@ -434,7 +434,7 @@ PHASES = [
          status="NEXT", color="#0891b2",
          what=[("p", "Present everything: an interactive dashboard to explore calls and results, and "
                      "the final written report.")],
-         how=[("b", "Streamlit app (dashboard.py): look up any call → its tone features, its score and "
+         how=[("b", "Streamlit app (phase6_dashboard.py): look up any call → its tone features, its score and "
                     "what the stock did next."),
               ("b", "Charts: returns by group, cumulative return paths (car_paths_finbert.csv), "
                     "backtest equity curve."),
@@ -442,8 +442,8 @@ PHASES = [
          example=[("p", "Pick 'SBUX 2024-01-30' → tone fell sharply vs last quarter, score 0.32 "
                         "(bottom 20%), stock −8.3% vs the market over the next 60 days.")],
          results=[("h", "Now"),
-                  ("b", "dashboard.py exists but reads the old VADER files → switch it to the FinBERT "
-                        "outputs of Phases 3–5.")],
+                  ("b", "phase6_dashboard.py: 7 pages on the FinBERT outputs of Phases 3–5; "
+                        "run with streamlit run phase6_dashboard.py.")],
          out=None),
 ]
 

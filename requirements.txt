@@ -3,7 +3,6 @@ numpy
 yfinance
 datasets
 textstat
-vaderSentiment
 scikit-learn
 xgboost
 scipy

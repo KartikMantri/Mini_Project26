@@ -1,67 +1,69 @@
-# Phase 3 — Type Classifier (Good / Bad)
+# Phase 3 — Type Classifier (Good / Bad score)
 
-**Status:** ✅ Complete — results in [`Phase3_results.md`](Phase3_results.md), feature
-evidence in [`Phase3_feature_study.md`](Phase3_feature_study.md).
+**Status:** ✅ Complete. Results: [`Phase3_finbert_results.md`](Phase3_finbert_results.md).
+Script: [`phase3_train_classifier.py`](../phase3_train_classifier.py).
 
 ## Goal
-A model that scores each call as GOOD or BAD from language alone (no future prices), with
-an honest out-of-sample measure of how well it works.
+One score per call, between 0 and 1, that says how likely the firm is a GOOD type, computed
+only from information available on the day of the call.
 
-## Approach
-1. **Corrected event dates.** Day 0 is the call's calendar date (time of day dropped), so
-   before-open calls are no longer shifted one day late (`event_returns.py`).
-2. **Walk-forward testing.** Each year is predicted by a model trained only on earlier years,
-   with a gap so no training target overlaps the test year. This gives out-of-sample
-   predictions for every year from 2010 onward instead of one fixed split.
-3. **Two-step design.** The model is trained to predict the *immediate* reaction
-   (day −1 → +1), which measures what news the language carries. Its probability is the
-   GOOD/BAD score. Phase 4 tests whether that score also predicts the *drift* (day +2 → +60),
-   i.e. whether the market under-reacted. Training straight on the drift label was tried
-   and did worse (the drift label is very noisy).
-4. **Inputs chosen by evidence, not guesswork.** `feature_study.py` scores every feature
-   group, then adds groups one at a time and keeps one only if it raises validation AUC
-   (2012–2017) by at least 0.002. The 2018–2025 holdout years were not used for choosing.
+## Input
+- `data/features_finbert.csv` (Phase 2): the 18 language features.
+- `data/calls_all.csv` and `data/prices.csv` (Phase 1): returns, used for targets and the two
+  market inputs.
 
-## Inputs
-| Group | What it is | Kept? |
-|---|---|---|
-| delta | change in each Phase 2 feature vs. the firm's previous call | ✅ biggest single gain |
-| text | TF-IDF + logistic-regression score on the transcript words (full, prepared, Q&A) | ✅ |
-| lm | Loughran-McDonald positive / negative / uncertainty / net | ✅ |
-| market | 3-month abnormal return and volatility before the call | ✅ |
-| sentiment, style, qa | Phase 2 VADER, readability, Q&A dynamics (raw levels) | ❌ no gain once the above are in |
-| similarity | word overlap with the previous call | ❌ no gain |
-| — | whole-document VADER compound (3 columns) | ❌ dropped: +1.0 on 99.5% of calls |
+## Procedure
+1. **Target: the immediate reaction.** The model learns whether the stock beat the S&P 500 from
+   day −1 to +1. That reaction is mostly caused by the call, so it is a cleaner teacher than the
+   3-month GOOD/BAD label (training on GOOD/BAD directly gave AUC 0.511 vs 0.537). The model
+   also never sees the 3-month outcome, so if its score predicts the drift in Phase 4, the market
+   must have been slow.
+2. **Inputs chosen on validation years only.** Feature groups are added one at a time and kept
+   only if the 2012–2017 validation AUC rises by at least 0.002. Two groups survived:
+   - **FinBERT tone (8):** script, executive-answer and analyst tone, negative share, worst-10%
+     tone, tone spread, tone gap, delta tone
+   - **Market (2):** pre-call abnormal return and pre-call volatility
 
-Final model: Logistic Regression on 37 inputs (it beat XGBoost on this data).
+   Forward-looking, dictionary, style, change-since-last-call and a word-frequency (TF-IDF)
+   text model added nothing.
+3. **Cleaning, from training rows only:** extremes capped at the 1st/99th percentile, blanks
+   filled with the median, inputs standardised to z-scores.
+4. **Model: logistic regression** (L2 penalty, C = 0.05). It is simple, it overfits less on noisy
+   returns, and its weights are readable. XGBoost was tried: AUC 0.618 vs 0.611, no real gain.
+5. **Walk-forward training.** Every year from 2010 to 2025 a fresh model is trained only on
+   earlier calls (with a 7-day embargo) and scores the next year, so every score is
+   out-of-sample.
+6. **Check:** a single fixed split (train before 2022, test 2022–2025) gives the same AUC (0.611).
 
-## Results (holdout years 2018–2025)
-- Immediate reaction: **AUC 0.588**.
-- Later drift: rank correlation +0.056 (t = 3.3); the 20% highest-scored calls drift
-  **+1.30%** more than the 20% lowest over ~3 months.
-- A model without language (market + reaction only) gets +0.02% on the same comparison,
-  so the drift signal comes from the language.
-- GOOD/BAD accuracy is 51.7% vs. 51.0% for always guessing the majority. The score is a
-  ranking signal: it is useful at the extremes, not as a yes/no call on every firm.
+## What it learned (2024 model)
+Largest weights: analyst tone +0.287, delta tone +0.247, script tone +0.136. A very mixed call
+(high tone spread) and a stock that already ran up before the call both lower the score. The
+model trusts the signals that are hardest to fake: the analysts and the change in tone.
+
+## Example
+Starbucks, 30 January 2024: delta tone was −3.04 standard deviations; with the other inputs the
+total was −0.764, so score = 1 / (1 + e^0.764) = **0.317**, one of the lowest of that quarter.
+
+## Results (holdout 2018–2025)
+| Check | AUC |
+|---|---|
+| Reaction, holdout 2018–2025 | **0.611** |
+| Reaction, validation 2012–2017 | 0.640 |
+| Earlier VADER-feature version (archived) | 0.588 |
+| XGBoost instead | 0.618 |
+| Fixed split 2022–2025 | 0.611 |
+
+AUC = chance a random up-reacting call is ranked above a random down-reacting one (0.5 = coin flip).
 
 ## How to run
 ```bash
-python train_classifier.py              # ~30 s using committed data/text_scores.csv
-python train_classifier.py --rebuild-text   # needs local data/master.csv, ~6 min
-python feature_study.py                 # optional, slow: re-runs the input selection
+python phase3_train_classifier.py                 # uses the committed text-score cache
+python phase3_train_classifier.py --rebuild-text  # needs local data/calls_all.csv
 ```
 
-## Outputs
-- `data/predictions.csv` — out-of-sample score per call, 2012–2025 (`confidence_good`,
-  `predicted`, plus every comparison model's score)
-- `data/text_scores.csv` — out-of-sample text scores (committed; lets teammates run without master.csv)
-- `models/final_model.joblib` — final model refit on all data
-
-## Earlier attempt (2026-11-03, Kartik)
-A fixed split (train to 2018, validation 2019–2021, test 2022+, with 61-trading-day gaps) on the
-original 31 features gave validation AUC 0.519 (Logistic Regression) and 0.511 (XGBoost), no
-better than chance. That result led to the current design; its validation/holdout separation and
-leakage gap are kept in the walk-forward setup. Details in `PROGRESS.md`.
+## Output
+`data/predictions_finbert.csv`: one out-of-sample score per call, 2012–2025 (`score_final`, plus
+each comparison model's score).
 
 ## Next
-→ Phase 4 — Market-Reaction Test
+→ [Phase 4 — Market-Reaction Test](Phase4_Market_Reaction_Test.md)

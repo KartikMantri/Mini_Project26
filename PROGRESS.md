@@ -10,19 +10,40 @@ connective narrative across phases, including decisions still being debated.
 
 ---
 
-## Current snapshot (as of 2026-11-12)
+## Current snapshot (as of 2026-11-23)
 
 | Phase | Status |
 |---|---|
 | 0 — Setup & Foundation | ✅ Done |
 | 1 — Data Collection | ✅ Scaled: 10,493 calls across 200 tickers (2005–2025); full 12,789-call set with corrected dates in `data/calls_all.csv` |
-| 2 — Signal Extraction | ✅ Rebuilt with FinBERT: `data/features_finbert.csv` (12,716 calls × 18 features). Phase 3 still reads the old VADER `data/features_expanded.csv` until it is switched over |
-| 3 — Type Classifier | ✅ Re-run on FinBERT (`train_classifier_finbert.py`): reaction AUC 0.611 on the 2018–2025 holdout (VADER 0.588) |
-| 4 — Market-Reaction Test | ✅ Done on the FinBERT score (`market_reaction_finbert.py`): holdout drift +1.62% top vs bottom (p 0.002), +1.31% with controls (p 0.013) |
+| 2 — Signal Extraction | ✅ FinBERT: `data/features_finbert.csv` (12,716 calls × 18 features), `phase2_extract_finbert_features.py`. VADER version archived in `archive/vader/` |
+| 3 — Type Classifier | ✅ FinBERT (`phase3_train_classifier.py`): reaction AUC 0.611 on the 2018–2025 holdout (VADER 0.588) |
+| 4 — Market-Reaction Test | ✅ Done on the FinBERT score (`phase4_market_reaction_test.py`): holdout drift +1.62% top vs bottom (p 0.002), +1.31% with controls (p 0.013) |
 | 5 — Trading Backtest | ✅ Done (`backtest_finbert.py`): long-short +6.9%/year after costs, Sharpe 0.74, p 0.032, on the 2018–2025 holdout |
-| 6 — Dashboard & Report | ✅ Dashboard rebuilt on the FinBERT results (`streamlit run dashboard.py`); strategy report done; research paper kept local |
+| 6 — Dashboard & Report | ✅ Dashboard on the FinBERT results (`streamlit run phase6_dashboard.py`); strategy report done; research paper kept local |
 
 **Immediate next step:** final review: check references, update the research paper with the strategy variants, prepare the presentation. The VADER pipeline is kept only as a comparison baseline.
+
+**2026-11-23 — Codebase clean-up: VADER archived, scripts renamed by phase (Kartik):**
+- **Teammate method change (flagged):** Velu's VADER pipeline (Phase 2 features, Phase 3
+  classifier and feature study, first Phase 4 test) and the old `backtest.py` moved to
+  [`archive/vader/`](archive/vader/), with their data (`features_expanded.csv`,
+  `predictions.csv`, `text_scores.csv`) and VADER-era docs. Nothing was deleted; see
+  `archive/vader/README.md`.
+- The live scripts no longer read any VADER file. The FinBERT-vs-VADER numbers (AUC 0.588 vs
+  0.611, drift +1.40% vs +1.62%, backtest +5.9% vs +6.9%) are kept in the docs as a past result.
+- `phase3_train_classifier.py` now contains the walk-forward / model / metric helpers it used to
+  import from the VADER `train_classifier.py`.
+- Renamed: `collect_data.py` → `phase1_collect_transcripts_and_prices.py`; `event_returns.py` →
+  `phase1_abnormal_returns.py`; `build_call_dataset.py` → `phase1_build_labelled_calls.py`;
+  `extract_features_finbert.py` → `phase2_extract_finbert_features.py`;
+  `analyze_features_finbert.py` → `phase2_check_features.py`; `train_classifier_finbert.py` →
+  `phase3_train_classifier.py`; `market_reaction_finbert.py` → `phase4_market_reaction_test.py`;
+  `dashboard.py` → `phase6_dashboard.py`. Backtest scripts keep their names. Entries below this
+  one use the old names.
+- New FinBERT versions of `docxxs/Phase2_Signal_Extraction.md` and `Phase3_Type_Classifier.md`;
+  README rewritten; `vaderSentiment` dropped from `requirements.txt`.
+- Phases 3–5 re-run after the change to confirm the results are unchanged.
 
 **2026-11-23 — Chosen strategy switched to D; presentation, journey page and video (Kartik):**
 - **Decision:** the project now presents **Strategy D** (tilted 2:1, top 15% long / bottom 15%

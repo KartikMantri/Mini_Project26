@@ -1,4 +1,4 @@
-# Phase 4 (v2) — Market-Reaction Test on the FinBERT Score
+# Phase 4 — Market-Reaction Test on the FinBERT Score
 
 Does the market fully price what an earnings call's language reveals? The Phase 3
 FinBERT score ([`Phase3_finbert_results.md`](Phase3_finbert_results.md); trained only on the
@@ -9,8 +9,7 @@ the market under-reacted to the language.
 Method: calls are ranked by score within each calendar quarter; returns are abnormal
 (stock minus S&P 500) and winsorised at 1% / 99%; spreads are tested across quarters with
 Newey-West (1 lag) t-statistics; regressions use quarter fixed effects with errors clustered
-by quarter. These are the same definitions as Velu's VADER Phase 4, so the numbers compare
-directly. Regenerate with `python market_reaction_finbert.py`.
+by quarter. Regenerate with `python phase4_market_reaction_test.py`.
 
 ## Answer (holdout years 2018–2025)
 
@@ -21,30 +20,11 @@ directly. Regenerate with `python market_reaction_finbert.py`.
 
 Over 2012–2025 (54 quarters): drift top − bottom +1.28% (t 4.0, p 0.000); with controls +1.13% (t 3.3, p 0.002).
 
-## FinBERT vs Velu's VADER Phase 4
+## Earlier VADER baseline (past result)
 
-Velu's scores are `score_reaction_lr` from his `vadar-phase4` branch (his Phase 3 with
-the extra `text_delta` input), run through **this** script. His own report gave
-holdout drift +1.20% (t 1.8) and +1.15% with controls; small differences below come from
-implementation details.
-
-**Each run on its own calls** (ours includes the old NEUTRAL calls):
-
-| Run | Calls | Immediate top − bottom | Drift top − bottom | Drift with controls (3) |
-|---|---|---|---|---|
-| FinBERT, holdout 2018–2025 | 5,748 | +3.94% (t 13.2) | +1.62%\*\*\* (t 3.4, p 0.002) | +1.31%\*\* (t 2.7, p 0.013) |
-| VADER (Velu), holdout 2018–2025 | 4,807 | +3.86% (t 10.1) | +1.40%\* (t 2.0, p 0.059) | +1.29%\* (t 1.7, p 0.099) |
-| FinBERT, 2012–2025 | 9,848 | +3.86% (t 19.6) | +1.28%\*\*\* (t 4.0, p 0.000) | +1.13%\*\*\* (t 3.3, p 0.002) |
-| VADER (Velu), 2012–2025 | 8,066 | +3.32% (t 12.5) | +1.43%\*\*\* (t 3.0, p 0.004) | +1.36%\*\* (t 2.4, p 0.021) |
-
-**Same calls only** (calls in both runs):
-
-| Run | Calls | Immediate top − bottom | Drift top − bottom | Drift with controls (3) |
-|---|---|---|---|---|
-| FinBERT, holdout 2018–2025 | 4,807 | +3.90% (t 12.8) | +1.75%\*\*\* (t 3.0, p 0.006) | +1.48%\*\* (t 2.6, p 0.013) |
-| VADER (Velu), holdout 2018–2025 | 4,807 | +3.86% (t 10.1) | +1.40%\* (t 2.0, p 0.059) | +1.29%\* (t 1.7, p 0.099) |
-| FinBERT, 2012–2025 | 8,056 | +3.85% (t 18.2) | +1.44%\*\*\* (t 3.6, p 0.001) | +1.32%\*\*\* (t 3.2, p 0.002) |
-| VADER (Velu), 2012–2025 | 8,056 | +3.33% (t 12.8) | +1.45%\*\*\* (t 3.1, p 0.003) | +1.37%\*\* (t 2.4, p 0.020) |
+Run through this same test, the earlier VADER-feature score (Velu's pipeline) gave a
+holdout drift gap of +1.40% (p 0.059), against +1.62% (p 0.002) for FinBERT. That code is
+kept in [`archive/vader/`](../archive/vader/) and is no longer part of the pipeline.
 
 ## Holdout years 2018–2025
 
@@ -132,8 +112,8 @@ Immediate reaction on score rank: +4.66%\*\*\* (t 23.3).
 
 ## Robustness: holdout without the pandemic period
 
-Same exclusions as Velu's check. **Post-hoc:** these were chosen after seeing that
-2020–2021 were weak years in his run, so they explain the main result; they don't replace it.
+**Post-hoc:** these exclusions were chosen after seeing that 2020–2021 were weak years in
+an earlier run, so they explain the main result; they don't replace it.
 
 | Run | Calls | Immediate top − bottom | Drift top − bottom | Drift with controls (3) |
 |---|---|---|---|---|

@@ -1,7 +1,7 @@
 """
 Phase 2 (v2) — checks on the FinBERT features
 ==============================================
-Runs after extract_features_finbert.py. Report only: nothing here chooses features.
+Runs after phase2_extract_finbert_features.py. Report only: nothing here chooses features.
 
   1. Spearman correlation heatmap of the 18 features -> results/feature_correlation.png,
      and every pair with |r| > 0.85
@@ -13,7 +13,7 @@ Runs after extract_features_finbert.py. Report only: nothing here chooses featur
   5. Summary statistics (mean/min/max/nulls) for docxxs/features_finbert.md
 
 Usage:
-    python analyze_features_finbert.py
+    python phase2_check_features.py
 """
 
 from pathlib import Path
@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from extract_features_finbert import FEATURES
+from phase2_extract_finbert_features import FEATURES
 
 FEATURES_CSV  = Path("data/features_finbert.csv")
 HEATMAP_PNG   = Path("results/feature_correlation.png")

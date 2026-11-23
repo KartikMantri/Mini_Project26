@@ -3,7 +3,7 @@
 **Status:** ✅ Done on the FinBERT score (2026-11-11; re-run 2026-11-12 after the PARA price
 fix). Results:
 [`Phase4_finbert_results.md`](Phase4_finbert_results.md). Script:
-[`market_reaction_finbert.py`](../market_reaction_finbert.py).
+[`phase4_market_reaction_test.py`](../phase4_market_reaction_test.py).
 
 ## Goal
 Check whether the market fully prices what an earnings call's language reveals. This is the
@@ -30,10 +30,10 @@ scientific core of the project.
   is evidence of under-reaction.
 - A model without language shows no drift (−0.36%, p 0.53).
 - Validation years 2012–2017: drift +0.85% (p 0.031).
-- Velu's VADER version (branch `vadar-phase4`), run through the same tests on the same calls:
+- Velu's earlier VADER version (past result; code in [`archive/vader/`](../archive/vader/)), run through the same tests on the same calls:
   +1.40% (p 0.059), +1.29% with controls (p 0.099), not significant at 5% on the holdout.
 - PARA calls are excluded: its series in `data/prices.csv` is not Paramount's price
-  (see `event_returns.py`).
+  (see `phase1_abnormal_returns.py`).
 
 ## Next
 → Phase 5 — Trading Backtest: is the drift large enough to trade after costs? Yes, modestly:

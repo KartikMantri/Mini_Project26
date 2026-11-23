@@ -1,8 +1,8 @@
 """
-Phase 3 (v2) — Type Classifier on the FinBERT features
-=======================================================
-Same method as train_classifier.py (Velu's walk-forward), with the VADER features replaced by
-the 18 FinBERT/LM features in data/features_finbert.csv and the full 12,712-call set.
+Phase 3 — Type Classifier: one out-of-sample score per call
+===========================================================
+Walk-forward logistic regression on the 18 FinBERT/LM features in data/features_finbert.csv
+(plus pre-call market inputs), over the full 12,712-call set.
 
 Two evaluation setups:
   MAIN   walk-forward: each year is predicted by a model trained only on earlier years.
@@ -18,40 +18,42 @@ a model trained straight on GOOD/BAD.
 Outputs:
   data/text_scores_finbert.csv        out-of-sample TF-IDF text scores (cache)
   data/predictions_finbert.csv        out-of-sample predictions, 2012-2025
-  docxxs/Phase3_finbert_results.md    results, incl. comparison with Velu's VADER run
+  docxxs/Phase3_finbert_results.md    results
 
 Usage:
-    python train_classifier_finbert.py
-    python train_classifier_finbert.py --rebuild-text
+    python phase3_train_classifier.py
+    python phase3_train_classifier.py --rebuild-text
 """
 
 import argparse
+import warnings
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
+from scipy.stats import spearmanr
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import HashingVectorizer
-from sklearn.metrics import roc_auc_score
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler, normalize
 
-from event_returns import BAD_PRICE_TICKERS, PRE_WIN, EventReturns, load_prices
-from extract_features_finbert import FEATURES
-from train_classifier import (HOLDOUT_YEARS, TEXT_FIRST_TEST_YEAR, FIRST_TEST_YEAR,
-                              VALID_YEARS, TABLE_HEAD, TextModel, _split_sections,
-                              evaluate, fmt_row, make_tabular, prev_call_similarity,
-                              walk_forward)
-from pathlib import Path
+from phase1_abnormal_returns import BAD_PRICE_TICKERS, PRE_WIN, EventReturns, load_prices
+from phase2_extract_finbert_features import FEATURES
+
+warnings.filterwarnings("ignore")
 
 FEATURES_CSV    = Path("data/features_finbert.csv")
 CALLS_CSV       = Path("data/calls_all.csv")
 TEXT_SCORES_CSV = Path("data/text_scores_finbert.csv")
 PREDICTIONS_CSV = Path("data/predictions_finbert.csv")
-VELU_PRED_CSV   = Path("data/predictions.csv")          # Velu's VADER run (baseline)
 CACHE_DIR       = Path("data/_cache")
 RESULTS_MD      = Path("docxxs/Phase3_finbert_results.md")
 
-MIN_GAIN        = 0.002          # same rule as feature_study.py
+MIN_GAIN        = 0.002          # a group is kept only if it adds this much validation AUC
 FIXED_TEST_START = "2022-01-01"  # Kartik's split
 LABEL_GAP_DAYS   = 61            # trading days
 
@@ -73,6 +75,135 @@ GROUPS = {
 }
 FINBERT_GROUPS = ["tone", "fls", "lm", "style", "delta"]
 CANDIDATES = ["tone", "fls", "lm", "style", "delta", "similarity", "text", "market"]
+
+
+
+# Walk-forward settings
+TEXT_FIRST_TEST_YEAR = 2008     # first year with out-of-sample text scores
+FIRST_TEST_YEAR      = 2010     # first year predicted by the main models
+VALID_YEARS          = (2012, 2017)
+HOLDOUT_YEARS        = (2018, 2025)
+# A training row is only usable once its target is known: ~1 week for the reaction,
+# ~3 months (60 trading days) for the drift.
+EMBARGO_DAYS = {"y_imm": 7, "y_drift": 100}
+
+
+# ---------------------------------------------------------------------------
+# Shared building blocks (walk-forward, models, metrics)
+# ---------------------------------------------------------------------------
+
+def walk_forward(df, target, first_year, fit, predict, train_mask=None):
+    """For each year Y >= first_year: fit on rows whose target was already known
+    before Jan 1 of Y, predict year Y. Returns an out-of-sample probability array."""
+    proba = np.full(len(df), np.nan)
+    embargo = pd.Timedelta(days=EMBARGO_DAYS[target])
+    has_y = df[target].notna().values
+    base = has_y if train_mask is None else has_y & train_mask
+    for year in range(first_year, df["year"].max() + 1):
+        cutoff = pd.Timestamp(f"{year}-01-01") - embargo
+        tr = np.where(base & (df["call_date"] < cutoff).values)[0]
+        te = np.where((df["year"] == year).values)[0]
+        if len(tr) < 200 or len(te) == 0:
+            continue
+        model = fit(tr, df[target].values[tr].astype(int))
+        proba[te] = predict(model, te)
+    return proba
+
+
+def make_tabular(kind):
+    """'lr': median fill + z-score + L2 logistic regression (C=0.05); 'xgb': small XGBoost."""
+    if kind == "lr":
+        return Pipeline([("imp", SimpleImputer(strategy="median")),
+                         ("sc", StandardScaler()),
+                         ("clf", LogisticRegression(C=0.05, max_iter=3000))])
+    from xgboost import XGBClassifier
+    return XGBClassifier(n_estimators=300, max_depth=3, learning_rate=0.03,
+                         subsample=0.8, colsample_bytree=0.8, min_child_weight=20,
+                         eval_metric="logloss", random_state=42, n_jobs=-1)
+
+
+def _split_sections(text):
+    """Same rule as Phase 2: Q&A starts at the 2nd 'Operator:' turn."""
+    first = text.find("Operator:")
+    second = text.find("Operator:", first + 1) if first >= 0 else -1
+    if second < 0:
+        return text, ""
+    return text[:second], text[second:]
+
+
+class TextModel:
+    """TF-IDF (vocabulary + idf learned from training rows only) + logistic regression."""
+
+    def __init__(self, C=1.0, min_df=10, max_df=0.5, max_features=50_000):
+        self.C, self.min_df, self.max_df, self.max_features = C, min_df, max_df, max_features
+
+    def _tfidf(self, X):
+        return normalize(X[:, self.keep].multiply(self.idf).tocsr())
+
+    def fit(self, X, y):
+        n = X.shape[0]
+        dfreq = X.getnnz(axis=0)
+        keep = np.where((dfreq >= self.min_df) & (dfreq <= self.max_df * n))[0]
+        if len(keep) > self.max_features:
+            keep = keep[np.argsort(-dfreq[keep])[:self.max_features]]
+        self.keep = keep
+        self.idf = (np.log((1 + n) / (1 + dfreq[keep])) + 1).astype(np.float32)
+        self.clf = LogisticRegression(C=self.C, max_iter=3000).fit(self._tfidf(X), y)
+        return self
+
+    def predict_proba(self, X):
+        return self.clf.predict_proba(self._tfidf(X))[:, 1]
+
+
+def prev_call_similarity(df, X):
+    """Cosine similarity between each call and the same firm's previous call."""
+    Xn = normalize(X)
+    order = df.sort_values(["ticker", "call_date"])
+    prev_row = order.groupby("ticker")["row_id"].shift(1)
+    sim = np.full(len(df), np.nan)
+    has = prev_row.notna().values
+    cur = order["row_id"].values[has]
+    prv = prev_row.values[has].astype(int)
+    sim[cur] = np.asarray(Xn[cur].multiply(Xn[prv]).sum(axis=1)).ravel()
+    return sim
+
+
+def year_mask(df, years):
+    return ((df["year"] >= years[0]) & (df["year"] <= years[1])).values
+
+
+def evaluate(df, proba, target, years):
+    """AUC / accuracy for the target, plus how well the score ranks the later drift."""
+    m = year_mask(df, years) & ~np.isnan(proba) & df[target].notna().values
+    y = df[target].values[m].astype(int)
+    p = proba[m]
+    res = {"n": int(m.sum()), "auc": roc_auc_score(y, p),
+           "acc": accuracy_score(y, p > 0.5), "base_rate": max(y.mean(), 1 - y.mean())}
+
+    # Rank correlation with drift, computed year by year (avoids pooling regimes)
+    sub = pd.DataFrame({"p": p, "drift": df["drift_ar"].values[m],
+                        "year": df["year"].values[m]}).dropna()
+    ics = sub.groupby("year").apply(lambda g: spearmanr(g["p"], g["drift"])[0])
+    res["drift_ic"] = ics.mean()
+    res["drift_ic_t"] = ics.mean() / (ics.std(ddof=1) / np.sqrt(len(ics)))
+    sub["q"] = sub.groupby("year")["p"].transform(
+        lambda s: pd.qcut(s.rank(method="first"), 5, labels=False))
+    qm = sub.groupby("q")["drift"].mean()
+    res["drift_q5_q1"] = qm.iloc[-1] - qm.iloc[0]
+    res["cm"] = confusion_matrix(y, p > 0.5)
+    return res
+
+
+TABLE_HEAD = ("| Model | Reaction AUC | GOOD/BAD AUC | GOOD/BAD accuracy | "
+              "Drift rank-corr (t) | Drift top-bottom 20% |\n|---|---|---|---|---|---|")
+
+
+def fmt_row(name, r_imm, r_drift):
+    imm = f"{r_imm['auc']:.4f}" if r_imm else "—"
+    return (f"| {name} | {imm} | {r_drift['auc']:.4f} | {r_drift['acc']:.3f} "
+            f"(majority {r_drift['base_rate']:.3f}) | "
+            f"{r_drift['drift_ic']:+.4f} ({r_drift['drift_ic_t']:+.1f}) | "
+            f"{r_drift['drift_q5_q1']*100:+.2f}% |")
 
 
 CLIP_COLS = ["pre_ar", "pre_vol", "imm_ar"]   # return inputs with fat tails
@@ -148,7 +279,7 @@ def build_dataset():
 
 
 # ---------------------------------------------------------------------------
-# Text scores (same TF-IDF model as train_classifier.py, on calls_all.csv)
+# Text scores (TF-IDF word-frequency model on calls_all.csv)
 # ---------------------------------------------------------------------------
 
 def hash_texts(df, min_global_df=5):
@@ -276,21 +407,6 @@ def evaluate_all(df, p, target):
             for per, yrs in PERIODS.items()}
 
 
-def velu_baseline(df, ours):
-    """Velu's VADER predictions vs ours on the calls both have (holdout + 2022+)."""
-    v = pd.read_csv(VELU_PRED_CSV, parse_dates=["call_date"])
-    m = df[["ticker", "call_date", "year", "imm_ar", "drift_ar", "y_imm", "y_drift"]].copy()
-    m["ours"] = ours
-    m = m.merge(v[["ticker", "call_date", "score_reaction_lr"]], on=["ticker", "call_date"])
-    m = m.dropna(subset=["ours", "score_reaction_lr"]).reset_index(drop=True)
-    out = {}
-    for per, yrs in (("holdout", HOLDOUT_YEARS), ("late", (2022, 2025))):
-        out[per] = {name: {"imm": evaluate(m, m[col].values, "y_imm", yrs),
-                           "drift": evaluate(m, m[col].values, "y_drift", yrs)}
-                    for name, col in (("velu", "score_reaction_lr"), ("ours", "ours"))}
-    return out
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rebuild-text", action="store_true")
@@ -336,9 +452,6 @@ def main():
                       "drift": evaluate(df, p, "y_drift", (2022, 2025))}
     fixed_info = (n_train, cutoff)
 
-    # ---- 4. Velu's VADER run on the same calls ----
-    base = velu_baseline(df, probas["final"])
-
     # ---- outputs ----
     keep = df["year"] >= VALID_YEARS[0]
     pred = df.loc[keep, ["ticker", "call_date", "imm_ar", "drift_ar", "pre_ar"]].copy()
@@ -351,10 +464,10 @@ def main():
     pred.to_csv(PREDICTIONS_CSV, index=False)
     print(f"[Phase3] saved {len(pred):,} predictions -> {PREDICTIONS_CSV}")
 
-    write_results(df, models, results, fixed, fixed_info, base, log, final_kind, final_groups)
+    write_results(df, models, results, fixed, fixed_info, log, final_kind, final_groups)
 
 
-def write_results(df, models, results, fixed, fixed_info, base, log, final_kind, final_groups):
+def write_results(df, models, results, fixed, fixed_info, log, final_kind, final_groups):
     def table(period):
         rows = [TABLE_HEAD]
         for key, (*_, desc) in models.items():
@@ -365,28 +478,21 @@ def write_results(df, models, results, fixed, fixed_info, base, log, final_kind,
     n_train, cutoff = fixed_info
     fixed_rows = [TABLE_HEAD] + [fmt_row(models[k][3], fixed[k]["imm"], fixed[k]["drift"])
                                  for k in fixed]
-    cmp_rows = [TABLE_HEAD]
-    for per, label in (("holdout", "2018–2025"), ("late", "2022–2025")):
-        for name, desc in (("velu", "Velu — VADER features"), ("ours", "Ours — FinBERT features")):
-            r = base[per][name]
-            cmp_rows.append(fmt_row(f"{desc}, {label}", r["imm"], r["drift"]))
-    n_cmp = base["holdout"]["ours"]["drift"]["n"]
 
     lines = [
-        "# Phase 3 (v2) — Classifier Results on FinBERT Features",
+        "# Phase 3 — Classifier Results on FinBERT Features",
         "",
-        "Same walk-forward method as [`Phase3_results.md`](Phase3_results.md) (Velu, VADER),",
-        "with the VADER features replaced by the 18 FinBERT/LM features",
+        "Walk-forward classifier on the 18 FinBERT/LM features",
         "([`features_finbert.md`](features_finbert.md)) and the full call set "
         f"({len(df):,} calls, old NEUTRAL calls included).",
-        "Regenerate with `python train_classifier_finbert.py`.",
+        "Regenerate with `python phase3_train_classifier.py`.",
         "",
         f"**Final model:** {final_kind.upper()} trained to predict the immediate reaction (day −1 → +1)",
         f"from: {', '.join(final_groups)} ({len(cols_for(final_groups))} inputs), chosen greedily on the",
         f"validation years {VALID_YEARS[0]}–{VALID_YEARS[1]} only. Its probability is the GOOD/BAD score.",
         "**GOOD/BAD:** GOOD if the drift (day +2 → +60 abnormal return) was positive.",
         "",
-        "Columns as in `Phase3_results.md`. Short-term returns are mostly noise: AUC 0.55–0.60 on",
+        "Short-term returns are mostly noise: AUC 0.55–0.60 on",
         "the reaction is a strong result; GOOD/BAD AUC barely above 0.5 is normal, and the",
         "top-minus-bottom 20% drift spread is what Phase 4 tests.",
         "",
@@ -406,12 +512,11 @@ def write_results(df, models, results, fixed, fixed_info, base, log, final_kind,
         "",
         table("late"),
         "",
-        f"## FinBERT vs Velu's VADER run, on the same {n_cmp:,} holdout calls",
+        "## Earlier VADER baseline (past result)",
         "",
-        "Only calls present in both runs (Velu's set excludes the old NEUTRAL calls). Velu's",
-        "score is `score_reaction_lr` from his `data/predictions.csv`.",
-        "",
-        "\n".join(cmp_rows),
+        "An earlier version of this model on VADER features (Velu's pipeline) reached a holdout",
+        "reaction AUC of 0.588 against 0.611 here, on the same calls. That code and its data are",
+        "kept in [`archive/vader/`](../archive/vader/) and are no longer part of the pipeline.",
         "",
         f"## Validation years {VALID_YEARS[0]}–{VALID_YEARS[1]} (used to choose inputs)",
         "",

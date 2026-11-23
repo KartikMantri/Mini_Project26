@@ -25,7 +25,7 @@ trading costs.
 5. **Measures:** annual return (daily mean × 252), volatility (daily std × √252), Sharpe ratio
    (return ÷ volatility), max drawdown, hit rate, Newey-West t on daily returns (10 lags).
 6. **Benchmarks:** S&P 500 buy-and-hold, long-only top 20% minus the S&P 500, the no-language
-   score, and Velu's VADER score under the same rules.
+   score, and (earlier, now archived) Velu's VADER score under the same rules.
 7. **Nothing was tuned on the backtest:** the 20% cut-off and the +2 → +60 hold come from
    Phase 4; costs are assumptions.
 
@@ -36,7 +36,7 @@ trading costs.
 | **FinBERT long-short, after costs** | **+6.9%** | 9.3% | **0.74** | −14.1% | 0.032 |
 | FinBERT long-short, before costs | +9.4% | 9.3% | 1.01 | −13.0% | 0.004 |
 | No-language score | −4.7% | 10.8% | −0.43 | −43.7% | 0.23 |
-| Velu's VADER score | +5.9% | 10.5% | 0.56 | −20.4% | 0.11 |
+| Velu's VADER score (past result, archived) | +5.9% | 10.5% | 0.56 | −20.4% | 0.11 |
 | S&P 500 buy-and-hold | +12.9% | 20.2% | 0.64 | −33.9% | — |
 
 - Profitable after costs and significant at 5%. Beta to the S&P 500 is 0.10: a separate source
@@ -51,7 +51,7 @@ trading costs.
   (p 0.24); the long side made the money and the short side lost.
 - Survivorship bias: the universe is today's 200 tickers. Trades fill at the closing price with
   no market impact; rebalancing between equal weights is not charged.
-- The old [`backtest.py`](../backtest.py) is superseded: it compounded thousands of
+- The old [`backtest.py`](../archive/vader/backtest.py) (archived) is superseded: it compounded thousands of
   overlapping trades as if they ran one after another.
 
 ## Next

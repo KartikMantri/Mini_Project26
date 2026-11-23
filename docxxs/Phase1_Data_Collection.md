@@ -3,7 +3,7 @@
 **Status:** ✅ Complete
 **Full report:** [`Phase1_Data_Collection_Report.pdf`](Phase1_Data_Collection_Report.pdf)
 **Flowchart:** [`phase1_flowchart.svg`](phase1_flowchart.svg) / [`.png`](phase1_flowchart.png)
-**Script:** [`collect_data.py`](../collect_data.py)
+**Script:** [`phase1_collect_transcripts_and_prices.py`](../phase1_collect_transcripts_and_prices.py)
 
 ## Goal
 One clean table — `master.csv` — with one row per earnings call, its transcript, and a
@@ -70,7 +70,7 @@ nothing to do with a specific call — see Section 7.4 of the report for the wor
 
 ```bash
 pip install -r requirements.txt
-python collect_data.py
+python phase1_collect_transcripts_and_prices.py
 ```
 
 Outputs land in `data/`: `raw_transcripts.csv`, `prices.csv`, `labeled_all.csv`, `master.csv`.

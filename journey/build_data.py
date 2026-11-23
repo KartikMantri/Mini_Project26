@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 OUT = Path(__file__).resolve().parent / "data.js"
 
-# key: (file, column) - same mapping as dashboard.py STRATS
+# key: (file, column) - same mapping as phase6_dashboard.py STRATS
 SERIES = {
     "A": ("backtest_finbert_daily.csv", "ours_net"),
     "B": ("backtest_finbert_2to1_l15s15_daily.csv", "ours_2020"),

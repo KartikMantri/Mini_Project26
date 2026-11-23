@@ -1,13 +1,13 @@
-# Phase 2 (v2) — FinBERT Feature Reference
+# Phase 2 — FinBERT Feature Reference
 
 > **Status: complete (2026-11-11).** Full run over all 12,716 calls done; statistics, correlation
 > checks and GOOD vs BAD tests are at the end of this file. Checks script:
-> [`analyze_features_finbert.py`](../analyze_features_finbert.py).
+> [`phase2_check_features.py`](../phase2_check_features.py).
 
 Reference for all **22 columns** in `data/features_finbert.csv`, produced by
-[`extract_features_finbert.py`](../extract_features_finbert.py) from `data/calls_all.csv`
-(built by [`build_call_dataset.py`](../build_call_dataset.py)). Replaces the VADER-based
-[`features.md`](features.md) / `data/features_expanded.csv`.
+[`phase2_extract_finbert_features.py`](../phase2_extract_finbert_features.py) from `data/calls_all.csv`
+(built by [`phase1_build_labelled_calls.py`](../phase1_build_labelled_calls.py)). Replaces the earlier VADER-based
+features ([`archive/vader/docs/features.md`](../archive/vader/docs/features.md)).
 
 > **Dataset:** 12,789 earnings calls across 198 S&P 500 tickers, 2005-10 → 2025-05, including the
 > 2,296 calls Phase 1 labeled NEUTRAL. 73 stub transcripts (< 1,000 words) are skipped, leaving
@@ -98,7 +98,7 @@ VADER pipeline used.
 | Column | Description |
 |--------|-------------|
 | `label` | `GOOD` if `abnormal_return` > 0, else `BAD` |
-| `abnormal_return` | Stock return minus S&P 500 return over trading days +2 → +60, with day 0 = the call's calendar date (`event_returns.py`) |
+| `abnormal_return` | Stock return minus S&P 500 return over trading days +2 → +60, with day 0 = the call's calendar date (`phase1_abnormal_returns.py`) |
 
 This differs from Phase 1's label (±2% threshold, NEUTRAL calls dropped, day 0 one trading day late
 for timed calls). For the 10,493 calls in both, 97.7% of labels agree.

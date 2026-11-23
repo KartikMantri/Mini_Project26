@@ -30,7 +30,7 @@ A clean environment and a decided scope, so no time is lost later.
    ```
    .
    ├── tickers.csv          # ticker + sector, read at runtime
-   ├── collect_data.py       # Phase 1 pipeline script
+   ├── phase1_collect_transcripts_and_prices.py       # Phase 1 pipeline script
    ├── requirements.txt
    ├── data/                 # pipeline outputs land here (committed — real dataset)
    └── docxxs/               # phase-wise documentation (this folder)

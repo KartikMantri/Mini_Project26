@@ -31,14 +31,14 @@ split leaving under 2% of the text as prepared remarks counts as failed). In Q&A
 speaker after an Operator turn who did not speak in the prepared remarks is the analyst;
 other speakers are executives. Transcripts that mark turns "Q -" / "A -" use that markup.
 
-Input:   data/calls_all.csv   (build_call_dataset.py; stub transcripts are skipped)
+Input:   data/calls_all.csv   (phase1_build_labelled_calls.py; stub transcripts are skipped)
 Output:  data/features_finbert.csv  — ticker, call_date, 18 features, label, abnormal_return
 Cache:   data/finbert_cache/<ticker>.parquet, so an interrupted run resumes where it stopped
 
 Usage:
-    python extract_features_finbert.py --sample 50    # trial: 50 calls, no cache, report only
-    python extract_features_finbert.py                # full run (GPU if available, else CPU)
-    python extract_features_finbert.py --data-dir /content/drive/MyDrive/data   # e.g. on Colab
+    python phase2_extract_finbert_features.py --sample 50    # trial: 50 calls, no cache, report only
+    python phase2_extract_finbert_features.py                # full run (GPU if available, else CPU)
+    python phase2_extract_finbert_features.py --data-dir /content/drive/MyDrive/data   # e.g. on Colab
 """
 
 import argparse

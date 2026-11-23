@@ -34,10 +34,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from backtest_finbert import (BAD_PRICE_TICKERS, COST_BPS, COST_GRID, NW_LAGS, PERIOD_NAME,
-                              PERIODS, PRED_CSV, VELU_CSV, Market, assign_sides, build_trades,
+                              PERIODS, PRED_CSV, Market, assign_sides, build_trades,
                               by_year, daily_portfolio, in_years, metrics, net_returns, pct, stars)
 from backtest_finbert_2to1 import HEAD, row, two_to_one, vs_market
-from event_returns import load_prices
+from phase1_abnormal_returns import load_prices
 
 
 def long_only(day, cost_bps=COST_BPS):
@@ -72,7 +72,6 @@ def write_results(series, day_ours, long_pct, out_md, chart_png):
               ("ours_gross", f"Long-only, FinBERT top {lp}, before costs"),
               ("all_calls", "Buy every call, no score (net)"),
               ("nolang", f"Long-only, no-language score top {lp} (net)"),
-              ("velu", f"Long-only, Velu's VADER score top {lp} (net)"),
               ("ours_20", "Long-only, FinBERT top 20% (net)"),
               ("two_to_one", "2:1 long-short, FinBERT 20%/20% (earlier run, net)"),
               ("neutral", "1:1 market-neutral, FinBERT 20%/20% (main result, net)"),
@@ -93,7 +92,7 @@ def write_results(series, day_ours, long_pct, out_md, chart_png):
           "| Strategy | Return vs buy every call | t (p) |", "|---|---|---|"]
     base = in_years(series["all_calls"], PERIODS["holdout"])
     for key, lab in labels:
-        if key in ("ours", "ours_gross", "nolang", "velu", "ours_20"):
+        if key in ("ours", "ours_gross", "nolang", "ours_20"):
             vm = vs_market(in_years(series[key], PERIODS["holdout"]), base)
             L.append(f"| {lab} | {pct(vm['excess'])} | {vm['t_ex']:.2f} ({vm['p_ex']:.3f})"
                      f"{stars(vm['p_ex'])} |")
@@ -212,10 +211,6 @@ def main():
     days = {"ours": live_days(preds, "score_final", "ours", m, long_pct),
             "nolang": live_days(preds, "score_nolang", "nolang", m, long_pct),
             "all_calls": live_days(preds, "score_final", "all", m, 1.0)}
-    if VELU_CSV.exists():
-        velu = pd.read_csv(VELU_CSV, parse_dates=["call_date"])
-        velu = velu[~velu["ticker"].isin(BAD_PRICE_TICKERS)]
-        days["velu"] = live_days(velu, "score_reaction_lr", "velu", m, long_pct)
     series = {k: long_only(v) for k, v in days.items()}
     series["ours_gross"] = long_only(days["ours"], 0)
 

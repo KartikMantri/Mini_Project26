@@ -7,9 +7,9 @@ post-call abnormal returns, and builds master.csv.
 
 Usage:
     pip install -r requirements.txt
-    python collect_data.py
-    python collect_data.py --start 2021-01-01 --end 2024-06-30 --threshold 0.02
-    python collect_data.py --force        # re-download even if cached files exist
+    python phase1_collect_transcripts_and_prices.py
+    python phase1_collect_transcripts_and_prices.py --start 2021-01-01 --end 2024-06-30 --threshold 0.02
+    python phase1_collect_transcripts_and_prices.py --force        # re-download even if cached files exist
 
 Outputs (in ./data/):
     raw_transcripts.csv   -- filtered transcripts, one row per call

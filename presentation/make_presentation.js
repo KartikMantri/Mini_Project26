@@ -787,7 +787,7 @@ newSection("Phase 6 · Dashboard");
     "the language features; the classifier's accuracy by year; the market reaction tests; all strategies against the S&P 500; and the method and limits. " +
     "Alongside it we wrote the strategy report and built an interactive journey page.");
   tracker(s, 6);
-  formula(s, "pip install -r requirements.txt\nstreamlit run dashboard.py", MX, TOP + 0.05, 5.0, 1.0, 17);
+  formula(s, "pip install -r requirements.txt\nstreamlit run phase6_dashboard.py", MX, TOP + 0.05, 5.0, 1.0, 17);
   bullets(s, ["Input: **only committed result files**: no raw transcripts needed", "Headline numbers recomputed when the app starts",
     "Also delivered: **Strategy report**, interactive **journey page**, explainer video"], { x: MX, y: 3.05, w: 5.0, h: 3.2, fontSize: 17 });
   const pages = [["Overview", "headline numbers, pipeline, growth of ₹100"], ["Call explorer", "any call: score, signal, price path"],
@@ -1028,7 +1028,7 @@ newSection("Close");
 }
 {
   const s = slide("TITLE", "Thank you", "Questions?",
-    "Thank you. We are happy to take questions. The code and results are on GitHub, and the dashboard can be run with streamlit run dashboard.py.");
+    "Thank you. We are happy to take questions. The code and results are on GitHub, and the dashboard can be run with streamlit run phase6_dashboard.py.");
   s.addText("Decoding the Game  ·  Kartik Mantri (24UCS246)  ·  Velu Kala (24DCS012)", { placeholder: "body" });
   txt(s, [{ text: "Supervisor: Asst. Prof. Girish Sharma  ·  The LNM Institute of Information Technology", options: { breakLine: true } },
     { text: "Code and results: github.com/KartikMantri/Mini_Project26", options: { bold: true, color: COL.navy } }],

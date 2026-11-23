@@ -1,54 +1,59 @@
-# Phase 2 — Signal Extraction (Features)
+# Phase 2 — Signal Extraction (Language Features)
 
-**Status:** ✅ `data/features_expanded.csv` generated (10,493 rows, 35 columns) — see [features.md](features.md) for the full feature reference and dataset statistics.
+**Status:** ✅ Complete (2026-11-11). Output: `data/features_finbert.csv` (12,716 calls × 22 columns).
+Full feature reference: [`features_finbert.md`](features_finbert.md).
 
 ## Goal
-Transform raw earnings call transcripts into structured numerical feature vectors describing linguistic style, management sentiment, uncertainty, complexity, and Q&A dynamics.
+Turn each earnings-call transcript into numbers that describe *how* management and analysts
+spoke, using only the call's own text and the same company's earlier calls (no look-ahead).
 
-## Dataset Scaling & Architecture Evolution
-The initial prototype extracted 17 FinBERT-based features across 509 calls in `features.csv` (since removed from the repo; last changed in commit `6b94ea8`). When the dataset was expanded to **10,493 calls** (200 tickers, 2005–2025) per the data scaling plan ([`Decision_Velu_Data_Scaling.md`](Decision_Velu_Data_Scaling.md)), single-process FinBERT inference proved too computationally slow (~50+ hours on CPU). 
+## Input
+`data/calls_all.csv` from Phase 1: 12,789 calls with full transcript text and speaker names.
 
-To scale efficiently while improving signal diversity, the pipeline transitioned to:
-- **Fast multi-process orchestrator:** [`extract_features_fast.py`](../extract_features_fast.py) leveraging 7 parallel background workers running [`_feat_worker.py`](../_feat_worker.py).
-- **VADER Sentiment Analysis:** Fast, robust lexical sentiment computed separately across Prepared Remarks, Q&A sections, and paragraph samples.
-- **Expanded Feature Set (35 columns):** Incorporating Loughran-McDonald financial dictionary percentages, Fog/Flesch readability indices, numeric specificity metrics, and Q&A directness indicators.
+## Procedure
+Script: [`phase2_extract_finbert_features.py`](../phase2_extract_finbert_features.py).
 
-## Design Decisions
+1. **Speaker turns.** A line starting `Name:` starts a turn; Operator lines are ignored.
+2. **Script vs live Q&A.** The call is split at the second `Operator:` line into prepared
+   remarks (can be polished in advance) and the Q&A (live, harder to manage).
+3. **Analyst vs executive.** After each Operator turn, the first speaker who did not appear in
+   the prepared remarks is the analyst asking the question.
+4. **FinBERT tone.** Every sentence is scored by
+   [`yiyanghkust/finbert-tone`](https://huggingface.co/yiyanghkust/finbert-tone), a BERT model
+   trained on financial text. Net tone = P(positive) − P(negative), from −1 to +1.
+5. **Forward-looking statements.** A second model,
+   [`yiyanghkust/finbert-fls`](https://huggingface.co/yiyanghkust/finbert-fls), marks each
+   sentence as specific, non-specific or not forward-looking.
+6. **Aggregation into 18 features**, in five groups:
 
-- **Section Split:** Each transcript is split into **Prepared Remarks** vs **Q&A** at the 2nd `"Operator:"` turn. The operator opens every call (1st turn), remains silent through prepared remarks, and speaks again to introduce the first Q&A caller (2nd turn). Transcripts with fewer than 2 operator turns fall back to treating the full text as prepared remarks with `NaN` for Q&A-specific metrics.
-- **Sentiment Scoring & Aggregation:**
-  - `vader_prepared_pos`, `vader_prepared_neg`, `vader_prepared_compound`: Sentiment metrics on prepared remarks.
-  - `vader_qa_pos`, `vader_qa_neg`, `vader_qa_compound`: Sentiment metrics on Q&A responses (256 rows with no split Q&A contain `NaN`, handled by downstream tree models).
-  - Paragraph-level compound stats: `sent_compound_mean`, `sent_compound_min`, `sent_compound_max`, `sent_compound_std`, `pct_pos_sents`, `pct_neg_sents`.
-- **Financial Lexicon (Loughran-McDonald):**
-  - Proportions of uncertainty words (`lm_uncertainty_pct`), weak modals (`lm_weak_modal_pct`), strong modals (`lm_strong_modal_pct`), and litigious terms (`lm_litigious_pct`).
-- **Readability & Complexity:**
-  - `fog_index`: Gunning Fog index for complexity.
-  - `flesch_ease`: Flesch Reading Ease score.
-  - `avg_sentence_length`: Average sentence length in words.
-- **Specificity & Q&A Dynamics:**
-  - `numeric_density`: Fraction of words containing digits (concrete disclosures vs vague generalities).
-  - `forward_looking_count`: Frequency of guidance and forward-looking statements.
-  - `qa_directness`, `qa_turn_count`, `qa_ratio`: Measures how directly management answers analysts and the balance between remarks and questioning.
+| Group | Features | What it captures |
+|---|---|---|
+| Tone level (3) | `prep_net_tone`, `qa_exec_net_tone`, `analyst_tone` | how positive the script, the answers and the questions sound |
+| Bad moments (3) | `neg_share`, `tone_p10`, `tone_std` | share of negative sentences, the worst 10%, how mixed the call is |
+| Contrast (2) | `tone_gap`, `delta_tone` | script vs live Q&A; change in tone since the company's previous call |
+| Specificity (2) | `specific_fls_share`, `fls_density` | how much, and how specifically, management talks about the future |
+| Dictionary & style (8) | Loughran-McDonald uncertainty / modal / negative word shares, numbers, directness, length, Fog index | hedging, precision, readability |
 
-## Feature Schema Summary
+7. **Checks** ([`phase2_check_features.py`](../phase2_check_features.py)): correlation heatmap
+   (`results/feature_correlation.png`), duplicate measures removed, length checks, and GOOD vs BAD
+   t-tests on calls before 2018 only, so the 2018–2025 holdout stays untouched.
 
-| Group | Columns | Count | Description |
-|---|---|---|---|
-| Identifiers & Targets | `ticker`, `call_date`, `label`, `abnormal_return` | 4 | Primary keys and target labels |
-| VADER Prepared | `vader_prepared_{pos,neg,compound}` | 3 | Tone of management's opening script |
-| VADER Q&A | `vader_qa_{pos,neg,compound}` | 3 | Tone of unscripted executive answers |
-| Paragraph Sentiment | `sent_compound_{mean,min,max,std}`, `pct_{pos,neg}_sents` | 6 | Micro-level sentiment distribution |
-| Loughran-McDonald | `lm_{uncertainty,weak_modal,strong_modal,litigious}_pct` | 4 | Financial-domain dictionary frequencies |
-| Readability | `fog_index`, `flesch_ease`, `avg_sentence_length` | 3 | Text complexity and readability |
-| Specificity & Structure | `numeric_density`, `word_count`, `forward_looking_{count,pct,density}` | 5 | Precision of corporate disclosure |
-| Q&A Dynamics | `qa_directness`, `qa_turn_count`, `qa_ratio` | 3 | Executive responsiveness and interaction balance |
+## Key decisions
+- **FinBERT, not a general sentiment tool.** The first version used VADER, built for social
+  media. It misreads finance words such as *liability* or *tax*, and its whole-call score was
+  +1.0 on 99.5% of calls. FinBERT improved every later result (reaction AUC 0.611 vs 0.588).
+  The VADER pipeline is archived in [`archive/vader/`](../archive/vader/).
+- **`delta_tone`:** some CEOs sound cheerful every quarter, so a drop from their own normal is
+  the real news. It compares only with the previous call, so there is no look-ahead.
+- **Stub transcripts** under 1,000 words (73 calls) are skipped.
 
-*For complete descriptive statistics (mean, min, max, null counts) on all 35 columns, see [`docxxs/features.md`](features.md).*
+## Example
+Starbucks, 30 January 2024: `prep_net_tone` +0.489 (upbeat script), `analyst_tone` −0.046,
+`delta_tone` −0.231 (a large fall since the previous quarter), `tone_std` 0.624 (a mixed call).
 
-## Input / Output
-- **Input:** `data/master.csv` (10,493 calls)
-- **Output:** `data/features_expanded.csv` (10,493 rows, 35 columns, 3.98 MB) — committed directly to the repo for Phase 3.
+## Output
+`data/features_finbert.csv`: 12,716 rows × 22 columns (ticker, call date, label, drift return and
+the 18 features).
 
-## Next Step
-→ **Phase 3 — Type Classifier:** Train Logistic Regression baseline and XGBoost models on `data/features_expanded.csv` using date-based train/test splits.
+## Next
+→ [Phase 3 — Type Classifier](Phase3_Type_Classifier.md)

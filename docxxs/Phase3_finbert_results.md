@@ -1,16 +1,15 @@
-# Phase 3 (v2) — Classifier Results on FinBERT Features
+# Phase 3 — Classifier Results on FinBERT Features
 
-Same walk-forward method as [`Phase3_results.md`](Phase3_results.md) (Velu, VADER),
-with the VADER features replaced by the 18 FinBERT/LM features
+Walk-forward classifier on the 18 FinBERT/LM features
 ([`features_finbert.md`](features_finbert.md)) and the full call set (12,712 calls, old NEUTRAL calls included).
-Regenerate with `python train_classifier_finbert.py`.
+Regenerate with `python phase3_train_classifier.py`.
 
 **Final model:** LR trained to predict the immediate reaction (day −1 → +1)
 from: tone, market (10 inputs), chosen greedily on the
 validation years 2012–2017 only. Its probability is the GOOD/BAD score.
 **GOOD/BAD:** GOOD if the drift (day +2 → +60 abnormal return) was positive.
 
-Columns as in `Phase3_results.md`. Short-term returns are mostly noise: AUC 0.55–0.60 on
+Short-term returns are mostly noise: AUC 0.55–0.60 on
 the reaction is a strong result; GOOD/BAD AUC barely above 0.5 is normal, and the
 top-minus-bottom 20% drift spread is what Phase 4 tests.
 
@@ -46,17 +45,11 @@ For reference, the walk-forward models on the same 2022–2025 calls:
 | Trained straight on GOOD/BAD (tone + text + market + reaction) | — | 0.5073 | 0.480 (majority 0.520) | +0.0465 (+1.1) | +0.72% |
 | No language — market + reaction only | — | 0.5134 | 0.480 (majority 0.520) | +0.0177 (+1.5) | +0.61% |
 
-## FinBERT vs Velu's VADER run, on the same 4,807 holdout calls
+## Earlier VADER baseline (past result)
 
-Only calls present in both runs (Velu's set excludes the old NEUTRAL calls). Velu's
-score is `score_reaction_lr` from his `data/predictions.csv`.
-
-| Model | Reaction AUC | GOOD/BAD AUC | GOOD/BAD accuracy | Drift rank-corr (t) | Drift top-bottom 20% |
-|---|---|---|---|---|---|
-| Velu — VADER features, 2018–2025 | 0.5879 | 0.5296 | 0.519 (majority 0.508) | +0.0612 (+3.1) | +1.57% |
-| Ours — FinBERT features, 2018–2025 | 0.6094 | 0.5351 | 0.520 (majority 0.508) | +0.0668 (+2.9) | +2.61% |
-| Velu — VADER features, 2022–2025 | 0.5913 | 0.5238 | 0.520 (majority 0.530) | +0.0774 (+2.5) | +2.07% |
-| Ours — FinBERT features, 2022–2025 | 0.6119 | 0.5268 | 0.511 (majority 0.530) | +0.0816 (+1.8) | +2.86% |
+An earlier version of this model on VADER features (Velu's pipeline) reached a holdout
+reaction AUC of 0.588 against 0.611 here, on the same calls. That code and its data are
+kept in [`archive/vader/`](../archive/vader/) and are no longer part of the pipeline.
 
 ## Validation years 2012–2017 (used to choose inputs)
 

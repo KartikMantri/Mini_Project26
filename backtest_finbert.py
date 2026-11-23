@@ -16,11 +16,10 @@ days +2 -> +60. This script trades that, the way a real investor could have:
            short leg. Rebalancing between equal weights is not charged.
 
 Benchmarks: the S&P 500 (price index, no dividends), long-only top 20% minus the S&P 500,
-the no-language Phase 3 model, and Velu's VADER score under the same rules.
+and the no-language Phase 3 model under the same rules.
 Holding period, cut-offs and costs were fixed from Phase 4 before looking at any backtest.
 
-Reads:  data/predictions_finbert.csv, data/prices.csv,
-        data/_cache/velu_phase4_predictions.csv (optional, Velu's VADER scores)
+Reads:  data/predictions_finbert.csv, data/prices.csv
 Writes: data/backtest_finbert_trades.csv   one row per trade
         data/backtest_finbert_daily.csv    daily returns of every strategy
         docxxs/Phase5_finbert_results.md   results
@@ -38,11 +37,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from event_returns import BAD_PRICE_TICKERS, MARKET_INDEX, event_day, load_prices
-from market_reaction_finbert import newey_west
+from phase1_abnormal_returns import BAD_PRICE_TICKERS, MARKET_INDEX, event_day, load_prices
+from phase4_market_reaction_test import newey_west
 
 PRED_CSV   = Path("data/predictions_finbert.csv")
-VELU_CSV   = Path("data/_cache/velu_phase4_predictions.csv")
 TRADES_CSV = Path("data/backtest_finbert_trades.csv")
 DAILY_CSV  = Path("data/backtest_finbert_daily.csv")
 RESULTS_MD = Path("docxxs/Phase5_finbert_results.md")
@@ -264,7 +262,6 @@ def write_results(series, days, trades, sides):
               ("ours_gross", "Long-short, FinBERT score, before costs"),
               ("ours_long", "Long-only top 20%, minus S&P 500 (net)"),
               ("nolang", "Long-short, no-language score (net)"),
-              ("velu", "Long-short, Velu's VADER score (net)"),
               ("sp500", "S&P 500 buy-and-hold")]
     for per in ("holdout", "valid", "all"):
         yrs = PERIODS[per]
@@ -296,8 +293,6 @@ def write_results(series, days, trades, sides):
     yr = pd.DataFrame({"FinBERT long-short (net)": by_year(series["ours"]),
                        "No-language (net)": by_year(series["nolang"]),
                        "S&P 500": by_year(series["sp500"])})
-    if "velu" in series:
-        yr.insert(2, "Velu VADER (net)", by_year(series["velu"]))
     yr = yr.loc[(yr.index >= 2013) & (yr.index <= 2025)]
     L += ["## Year by year", "", "| Year | " + " | ".join(yr.columns) + " |",
           "|---" * (len(yr.columns) + 1) + "|"]
@@ -313,7 +308,7 @@ def write_results(series, days, trades, sides):
           "- Scores come from Phase 3's walk-forward models, so every score was made without "
           "seeing that call's future; the cut-offs use only earlier calls.",
           "- Universe: today's 200 tickers, so firms that disappeared before 2025 are missing "
-          "(survivorship bias). PARA is excluded (bad prices, see `event_returns.py`).",
+          "(survivorship bias). PARA is excluded (bad prices, see `phase1_abnormal_returns.py`).",
           "- Trades are filled at the closing price with no market impact; daily rebalancing "
           "between equal weights is not charged.",
           "", "Chart: [`phase5_equity_curve.png`](phase5_equity_curve.png). Trades: "
@@ -324,7 +319,6 @@ def write_results(series, days, trades, sides):
 def plot(series):
     ink, ink2, grid, surface = "#0b0b0b", "#52514e", "#e4e3df", "#fcfcfb"
     lines = [("ours", "FinBERT long-short (net)", "#2a78d6", "-"),
-             ("velu", "Velu VADER long-short (net)", "#1baf7a", "-"),
              ("nolang", "No-language long-short (net)", "#eb6834", "-"),
              ("sp500", "S&P 500 buy-and-hold", ink2, "--")]
     fig, (ax, ax2) = plt.subplots(2, 1, figsize=(11, 7.5), sharex=True,
@@ -394,13 +388,6 @@ def main():
     days.update(dd); all_trades.append(tr)
     _, tr, dd = run(preds, "score_nolang", "nolang", m)
     days.update(dd); all_trades.append(tr)
-    if VELU_CSV.exists():
-        velu = pd.read_csv(VELU_CSV, parse_dates=["call_date"])
-        velu = velu[~velu["ticker"].isin(BAD_PRICE_TICKERS)]
-        _, tr, dd = run(velu, "score_reaction_lr", "velu", m)
-        days.update(dd); all_trades.append(tr)
-    else:
-        print(f"[Phase5] {VELU_CSV} not found, skipping Velu's comparison")
 
     trades = pd.concat(all_trades, ignore_index=True)
     last_entry = trades.groupby("strategy")["entry_date"].max()

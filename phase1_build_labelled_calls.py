@@ -6,17 +6,17 @@ Phase 1 labeled NEUTRAL (|abnormal return| <= 2%) and dropped. A strategy can't 
 advance which calls will end up NEUTRAL, so leaving them out tests only on calls that
 later moved a lot.
 
-Returns use event_returns.py (day 0 = call date), the same definitions as Phase 3:
+Returns use phase1_abnormal_returns.py (day 0 = call date), the same definitions as Phase 3:
   imm_ar    abnormal return, day -1 -> +1 (the immediate reaction)
   drift_ar  abnormal return, day +2 -> +60 (what happens afterwards)
   label     GOOD if drift_ar > 0, else BAD
   is_stub   True for transcripts under 1,000 words (empty or header-only files)
 
-master.csv and features_expanded.csv are not touched.
+The older master.csv (±2% labels, NEUTRAL calls dropped) is not touched.
 
 Usage:
-    python build_call_dataset.py
-    python build_call_dataset.py --start 2005-01-01 --end 2025-12-31
+    python phase1_build_labelled_calls.py
+    python phase1_build_labelled_calls.py --start 2005-01-01 --end 2025-12-31
 
 Output:
     data/calls_all.csv  (gitignored: >100MB)
@@ -26,8 +26,8 @@ import argparse
 
 import numpy as np
 
-from collect_data import DATA_DIR, fetch_transcripts, load_tickers
-from event_returns import DRIFT_WIN, IMMEDIATE_WIN, EventReturns, load_prices
+from phase1_collect_transcripts_and_prices import DATA_DIR, fetch_transcripts, load_tickers
+from phase1_abnormal_returns import DRIFT_WIN, IMMEDIATE_WIN, EventReturns, load_prices
 
 OUT_CSV    = DATA_DIR / "calls_all.csv"
 STUB_WORDS = 1000

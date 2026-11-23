@@ -20,7 +20,7 @@ If a leg has no open positions, the S&P 500 stands in for it (as in the main scr
 Caveat: stock prices are dividend-adjusted, but ^GSPC is the price index without dividends, so
 the comparison flatters the strategy by roughly the S&P 500's dividend yield.
 
-Reads:  data/predictions_finbert.csv, data/prices.csv, data/_cache/velu_phase4_predictions.csv
+Reads:  data/predictions_finbert.csv, data/prices.csv
 Writes: data/backtest_finbert_2to1_daily.csv
         docxxs/Phase5_finbert_2to1_results.md
         docxxs/phase5_equity_curve_2to1.png
@@ -39,11 +39,11 @@ import numpy as np
 import pandas as pd
 
 from backtest_finbert import (BAD_PRICE_TICKERS, BORROW, COST_BPS, COST_GRID, DAYS_PER_YEAR,
-                              NW_LAGS, PERIOD_NAME, PERIODS, PRED_CSV, VELU_CSV, Market,
+                              NW_LAGS, PERIOD_NAME, PERIODS, PRED_CSV, Market,
                               assign_sides, build_trades, by_year, daily_portfolio, in_years,
                               metrics, net_returns, pct, stars)
-from event_returns import load_prices
-from market_reaction_finbert import newey_west
+from phase1_abnormal_returns import load_prices
+from phase4_market_reaction_test import newey_west
 
 W_LONG, W_SHORT = 1.0, 0.5
 LONG_PCT = 0.20                 # top fraction bought
@@ -123,7 +123,6 @@ def write_results(series, day_ours):
     labels = [("ours", f"**2:1, FinBERT score, {picks()} (net of costs)**"),
               ("ours_gross", "2:1, FinBERT score, before costs"),
               ("nolang", "2:1, no-language score (net)"),
-              ("velu", "2:1, Velu's VADER score (net)"),
               ("ours_2020", "2:1, FinBERT, top 20% / bottom 20% (earlier run, net)"),
               ("ours_2010", "2:1, FinBERT, top 20% / bottom 10% (earlier run, net)"),
               ("longonly", f"Long-only, FinBERT top {LONG_PCT:.0%} (same longs, no short, net)"),
@@ -263,9 +262,6 @@ def main():
     preds = pd.read_csv(PRED_CSV, parse_dates=["call_date"])
     preds = preds[~preds["ticker"].isin(BAD_PRICE_TICKERS)]
     sources = {"ours": (preds, "score_final"), "nolang": (preds, "score_nolang")}
-    if VELU_CSV.exists():
-        velu = pd.read_csv(VELU_CSV, parse_dates=["call_date"])
-        sources["velu"] = (velu[~velu["ticker"].isin(BAD_PRICE_TICKERS)], "score_reaction_lr")
 
     def live_days(calls, col, name, bottom, top=None):
         top = LONG_PCT if top is None else top

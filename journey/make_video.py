@@ -822,7 +822,7 @@ def scenes():
         "Finally, checkpoint six: the dashboard, where all of this can be explored.")
 
     add(page("Phase 6", "Everything in one place", col(
-        '<div class="f">pip install -r requirements.txt\nstreamlit run dashboard.py</div>',
+        '<div class="f">pip install -r requirements.txt\nstreamlit run phase6_dashboard.py</div>',
         tbl(["Page", "Shows"],
             [["Overview", "headline numbers, pipeline, growth of ₹100"],
              ["Call explorer", "any call (e.g. SBUX 2024-01-30): score, signal, price path"],
